@@ -1,7 +1,19 @@
 /* Expanded illustrated room, digital time panel and animated slime sprite system. */
+.TopControls { grid-template-columns: 1.1fr .88fr 1.08fr .78fr; }
+.CodexUsagePanel { min-height: 164px; }
+.CodexUsagePanel .PanelTitle { display: flex; justify-content: space-between; align-items: center; }
+.CodexUsagePanel button { border: 0; color: #14252a; background: #7ee2e8; cursor: pointer; font: 16px 'Space Mono', monospace; line-height: 18px; }
+.CapacityGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.CapacityGrid div { padding: 8px; border: 2px solid #3f676a; background: #0c1b22; }
+.CapacityGrid span, .CapacityGrid small { display: block; color: #9ab9b4; font-size: 7px; }
+.CapacityGrid b { display: block; margin: 5px 0; color: #d9f45a; font: 16px 'Press Start 2P', monospace; }
+.CodexFacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.CodexFacts span { padding: 3px 4px; color: #b9d9d6; border: 1px solid #3f676a; font-size: 7px; }
+.CodexSource { display: block; margin-top: 7px; color: #7ee2e8; font-size: 8px; }
+
 .SlimeRoom {
   min-height: clamp(570px, 66vh, 760px);
-  background: #38261f url('assets/slime-room-background-v2.png') center / cover no-repeat;
+  background: #18242b url('assets/slime-room-background-v3.png') center / cover no-repeat;
 }
 
 .RoomWindow, .RoomRug, .RoomPlant, .Bed, .Desk { display: none; }
@@ -43,6 +55,8 @@
 .SlimeUnit.Resting.Sleep .SlimeSprite { background-position: 100% 0; animation: slimeSleep 2.5s steps(2) infinite; }
 .SlimeUnit.Working .SlimeSprite { background-position: 66.666% 0; animation: slimeWork 1s steps(2) infinite; }
 .SlimeUnit.Working { animation: agentArrival .7s steps(3) 2; }
+.SlimeUnit.Moving .SlimeSprite { background-position: 33.333% 0; animation: slimeWalk .35s steps(2) infinite; }
+.SlimeUnit.Moving strong { animation: nameWalk .35s steps(2) infinite; }
 
 .SlimeUnit.Coffee .IdleProp, .SlimeUnit.Eating .IdleProp {
   position: absolute; display: block; z-index: 4; left: 66px; top: 68px; width: 16px; height: 15px;
@@ -71,12 +85,18 @@
 @keyframes agentArrival { 50% { transform: translateX(8px) translateY(-4px); } }
 @keyframes labelPulse { 50% { transform: translateY(-2px); } }
 @keyframes telemetryPulse { 50% { opacity: .25; } }
+@keyframes slimeWalk { 50% { transform: translateY(-7px) rotate(-2deg); } }
+@keyframes nameWalk { 50% { transform: translateY(-3px); } }
 
 @media (max-width: 900px) {
+  .TopControls { grid-template-columns: 1fr 1fr; }
+  .CodexUsagePanel, .ActivityPanel { grid-column: span 1; }
   .SlimeRoom { min-height: 560px; }
   .DigitalClock { top: 62px; right: 14px; transform: scale(.85); transform-origin: top right; }
 }
 @media (max-width: 600px) {
+  .TopControls { grid-template-columns: 1fr; }
+  .CodexUsagePanel, .ActivityPanel { grid-column: auto; }
   .SlimeRoom { min-height: 620px; }
   .DigitalClock { top: 57px; right: 6px; transform: scale(.68); transform-origin: top right; }
   .SlimeUnit { transform: scale(.76); transform-origin: top left; }
