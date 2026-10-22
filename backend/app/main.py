@@ -84,6 +84,7 @@ agents: dict[str, AgentState] = {
     "scout": AgentState(id="scout", name="SCOUT", role="Investigación", status="running", tone="#57e5ff", token_budget=5500, tokens_used=1920),
     "forge": AgentState(id="forge", name="FORGE", role="Constructor", tone="#ff6b9a", token_budget=7000, tokens_used=840),
     "sentinel": AgentState(id="sentinel", name="SENTINEL", role="Control de calidad", tone="#9383ff", token_budget=4500, tokens_used=610, reasoning_effort="low"),
+    "muse": AgentState(id="muse", name="MUSE", role="Dirección de arte", tone="#ffaf5f", token_budget=6200, tokens_used=430, reasoning_effort="high"),
 }
 events: list[ActivityEvent] = []
 last_telemetry_sample = datetime.now(timezone.utc)
@@ -239,6 +240,7 @@ def dispatch_mission(request: DispatchRequest) -> DispatchResponse:
         "scout": ("investiga", "fuente", "busca", "anali", "compet", "mercado", "research"),
         "forge": ("crea", "constru", "código", "codigo", "web", "implemen", "diseña", "disena", "programa"),
         "sentinel": ("revisa", "calidad", "error", "test", "riesgo", "valida", "audita"),
+        "muse": ("diseño", "diseno", "visual", "estética", "estetica", "ui", "ux", "pixel", "animación", "animacion", "ilustración", "ilustracion", "arte", "estilo", "interfaz", "layout"),
     }
     for agent_id, keywords in rules.items():
         if any(keyword in prompt for keyword in keywords):

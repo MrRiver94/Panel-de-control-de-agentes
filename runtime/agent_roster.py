@@ -16,13 +16,20 @@ sentinel = Agent(
     name="SENTINEL",
     instructions="Revisa el resultado contra el objetivo; comunica riesgos, huecos y correcciones.",
 )
+muse = Agent(
+    name="MUSE",
+    instructions=(
+        "Eres el director de arte. Define una dirección visual concreta, respeta el lenguaje "
+        "pixel art isométrico de SlimeOps y entrega criterios de aceptación para FORGE."
+    ),
+)
 nexus = Agent(
     name="NEXUS",
     instructions=(
         "Eres el orquestador. Convierte el objetivo en un plan breve. "
-        "Delega investigación a SCOUT, creación a FORGE y revisión a SENTINEL cuando aporte valor."
+        "Delega investigación a SCOUT, creación a FORGE, dirección de arte a MUSE y revisión a SENTINEL cuando aporte valor."
     ),
-    handoffs=[scout, forge, sentinel],
+    handoffs=[scout, forge, sentinel, muse],
 )
 
 director = Agent(
