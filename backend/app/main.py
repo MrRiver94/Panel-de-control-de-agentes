@@ -6,12 +6,14 @@ from pathlib import Path
 import shutil
 import subprocess
 import threading
+import time
 from typing import Any
-from typing import Literal
+from typing import Generator, Literal
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 ReasoningEffort = Literal["low", "medium", "high", "xhigh"]
@@ -194,7 +196,28 @@ def health() -> dict[str, str]:
 @app.get("/api/dashboard")
 def dashboard() -> dict[str, list[dict]]:
     apply_live_telemetry()
+    return dashboard_snapshot()
+
+
+def dashboard_snapshot() -> dict[str, list[dict]]:
     return {"agents": [agent.model_dump() for agent in agents.values()], "events": [event.model_dump(mode="json") for event in events[:50]]}
+
+
+@app.get("/api/stream")
+def stream_dashboard() -> StreamingResponse:
+    """Push mission status changes immediately; polling remains as a safe fallback."""
+    def event_stream() -> Generator[str, None, None]:
+        previous = ""
+        while True:
+            encoded = json.dumps(dashboard_snapshot(), ensure_ascii=False, separators=(",", ":"))
+            if encoded != previous:
+                previous = encoded
+                yield f"data: {encoded}\n\n"
+            else:
+                yield ": keepalive\n\n"
+            time.sleep(0.25)
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.get("/api/codex-usage")
