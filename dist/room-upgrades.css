@@ -165,6 +165,15 @@
 @keyframes miniLeave { to { opacity: .05; transform: translate(-13px, 17px); } }
 @keyframes detailIn { from { transform: translateY(8px); opacity: .2; } }
 
+/* Wide console frame and bounded camera for the live room. */
+.AppShell { max-width: none; width: 100%; padding: 16px clamp(16px, 1.7vw, 34px) 26px; }
+.SlimeRoom { background: #162239; }
+.RoomWorld { --room-zoom: 1; --room-pan-x: 0%; --room-pan-y: 0%; position: absolute; inset: 0; overflow: visible; background: #162239 url('assets/slime-hq-isometric-v4.png') center / cover no-repeat; transform: translate(var(--room-pan-x), var(--room-pan-y)) scale(var(--room-zoom)); transform-origin: center center; transition: transform .36s cubic-bezier(.2,.8,.25,1); }
+.RoomCameraControls { position: absolute; z-index: 12; left: 2.2%; bottom: 4%; display: flex; align-items: center; gap: 4px; padding: 6px; border: 2px solid #78c9cd; background: #09151be8; box-shadow: 3px 3px 0 #0a0b14; }
+.RoomCameraControls span { margin-right: 3px; color: #d9f45a; font: 6px 'Press Start 2P', monospace; }
+.RoomCameraControls button { display: grid; width: 22px; height: 21px; place-items: center; padding: 0; border: 1px solid #5f898b; color: #d9f4df; background: #183038; cursor: pointer; font: 14px/1 'Space Mono', monospace; }
+.RoomCameraControls button:hover, .RoomCameraControls button:focus-visible { color: #1b2d30; background: #d9f45a; outline: none; }
+
 @media (max-width: 1100px) {
   .LiveOpsLayout { grid-template-columns: minmax(142px, .28fr) minmax(0, 1fr) minmax(142px, .28fr); gap: 8px; }
   .AgentMiniScene { height: 92px; }

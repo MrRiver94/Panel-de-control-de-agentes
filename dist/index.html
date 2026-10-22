@@ -20,6 +20,7 @@
     <section class="LiveOpsLayout" aria-label="Centro de operaciones en directo">
       <aside class="AgentWatchRail AgentWatchRailLeft" id="agentWatchRailLeft" aria-label="Agentes en directo, columna izquierda"></aside>
       <section class="SlimeRoom" id="slimeRoom">
+      <div class="RoomWorld" id="roomWorld" aria-hidden="true">
       <div class="RoomHeader"><span>SALA EN DIRECTO</span><small id="roomStatus">En espera</small></div>
       <aside class="DigitalClock" id="digitalClock" aria-label="Fecha y hora actual">
         <span class="ClockCaption">HORA LOCAL</span><strong id="digitalTime">00:00:00</strong>
@@ -28,6 +29,8 @@
       <i class="RoomWindow Left"></i><i class="RoomWindow Right"></i><i class="RoomRug"></i><i class="RoomPlant"></i>
       <i class="Bed Director"></i><i class="Bed Nexus"></i><i class="Bed Scout"></i><i class="Bed Forge"></i><i class="Bed Sentinel"></i>
       <i class="Desk Director"></i><i class="Desk Nexus"></i><i class="Desk Scout"></i><i class="Desk Forge"></i><i class="Desk Sentinel"></i>
+      </div>
+      <nav class="RoomCameraControls" aria-label="Controles de cámara"><span>CÁMARA</span><button type="button" data-camera="out" aria-label="Alejar">−</button><button type="button" data-camera="left" aria-label="Mover a la izquierda">‹</button><button type="button" data-camera="up" aria-label="Mover arriba">↑</button><button type="button" data-camera="center" aria-label="Centrar cámara">●</button><button type="button" data-camera="down" aria-label="Mover abajo">↓</button><button type="button" data-camera="right" aria-label="Mover a la derecha">›</button><button type="button" data-camera="in" aria-label="Acercar">+</button></nav>
       <form class="MissionPopup" id="missionForm"><label for="missionInput">NUEVA MISIÓN</label><div><input id="missionInput" required autocomplete="off" placeholder="Escribe una orden…" /><button>ENVIAR</button></div><small id="missionSummary">Los slimes descansan.</small></form>
       </section>
       <aside class="AgentWatchRail AgentWatchRailRight" id="agentWatchRailRight" aria-label="Agentes en directo, columna derecha"></aside>
