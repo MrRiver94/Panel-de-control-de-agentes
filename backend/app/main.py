@@ -144,9 +144,16 @@ def dispatch_mission(request: DispatchRequest) -> DispatchResponse:
             chosen.append(agent_id)
     if len(chosen) == 2:
         chosen.append("scout")
+    for agent in agents.values():
+        agent.status = "standby"
     for agent_id in chosen:
         agent = agents[agent_id]
         agent.status = "running"
+        events.insert(0, ActivityEvent(
+            id=str(uuid4()), agent=agent.name, kind="mission_dispatched",
+            message="se ha despertado para una nueva misión", tokens=0,
+            input_tokens=0, output_tokens=0, reasoning_tokens=0, created_at=now(),
+        ))
     specialist_names = ", ".join(agents[agent_id].name for agent_id in chosen[2:])
     plan = f"DIRECTOR prioriza; NEXUS coordina. Especialistas activados: {specialist_names}."
     return DispatchResponse(agent_ids=chosen, plan=plan)
