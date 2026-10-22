@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#101b25" />
   <title>SlimeOps — Control Room</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="room-upgrades.css" />
 </head>
 <body>
   <main class="AppShell">
@@ -16,7 +17,7 @@
       <article class="Panel ActivityPanel"><div class="PanelTitle">ACTIVIDAD</div><div class="ActivityList" id="activityLog"></div></article>
     </section>
     <section class="SlimeRoom" id="slimeRoom">
-      <div class="RoomHeader"><span>SALA EN DIRECTO</span><small id="roomStatus">En espera</small></div>
+      <div class="RoomHeader"><span>SALA EN DIRECTO</span><small id="roomStatus">En espera</small></div><div class="WallClock" id="wallClock" aria-label="Hora actual"><i class="ClockHour"></i><i class="ClockMinute"></i><b></b></div>
       <i class="RoomWindow Left"></i><i class="RoomWindow Right"></i><i class="RoomRug"></i><i class="RoomPlant"></i>
       <i class="Bed Director"></i><i class="Bed Nexus"></i><i class="Bed Scout"></i><i class="Bed Forge"></i><i class="Bed Sentinel"></i>
       <i class="Desk Director"></i><i class="Desk Nexus"></i><i class="Desk Scout"></i><i class="Desk Forge"></i><i class="Desk Sentinel"></i>
