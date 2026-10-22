@@ -39,7 +39,7 @@
 
 .SlimeUnit {
   z-index: 5; width: 64px; filter: drop-shadow(2px 3px 0 #1a1319);
-  transition: left 1.7s steps(14), top 1.7s steps(14);
+  transition: left 2.7s steps(18), top 2.7s steps(18);
 }
 .SlimeUnit::before {
   content: ''; position: absolute; z-index: 0; left: 8px; bottom: 13px; width: 45px; height: 9px;
@@ -61,6 +61,11 @@
 .SlimeUnit.Resting.Sleep .SlimeSprite { background-position: 100% 0; animation: slimeSleep 2.5s steps(2) infinite; }
 .SlimeUnit.Working .SlimeSprite { background-position: 66.666% 0; animation: slimeWork 1s steps(2) infinite; }
 .SlimeUnit.Working { animation: agentArrival .7s steps(3) 2; }
+.SlimeUnit.Commuting .SlimeSprite { background-position: 33.333% 0; animation: commuteWalk .34s steps(2) infinite; }
+.SlimeUnit.Commuting .WorkLabel { display: block; border-color: #d9a65a; background: #fff0c7; animation: labelPulse 1s steps(2) infinite; }
+.SlimeUnit.Commuting.Coffee .IdleProp { display: block; position: absolute; z-index: 3; left: 43px; top: 42px; width: 10px; height: 9px; border: 1px solid #2c2837; background: #fff1d4; animation: putCupDown .65s steps(3) forwards; }
+.SlimeUnit.Commuting.Coffee .IdleProp::after { content: ''; position: absolute; right: -5px; top: 1px; width: 3px; height: 4px; border: 1px solid #2c2837; }
+.SlimeUnit.Commuting.Eating .IdleProp { display: block; position: absolute; z-index: 3; left: 43px; top: 43px; width: 10px; height: 8px; border: 1px solid #2c2837; border-radius: 50%; background: #ffbd5c; animation: putCupDown .65s steps(3) forwards; }
 .SlimeUnit.Moving .SlimeSprite { background-position: 33.333% 0; animation: slimeWalk .35s steps(2) infinite; }
 .SlimeUnit.Moving strong { animation: nameWalk .35s steps(2) infinite; }
 
@@ -93,6 +98,8 @@
 @keyframes telemetryPulse { 50% { opacity: .25; } }
 @keyframes slimeWalk { 50% { transform: translateY(-7px) rotate(-2deg); } }
 @keyframes nameWalk { 50% { transform: translateY(-3px); } }
+@keyframes commuteWalk { 50% { transform: translateY(-6px) rotate(-2deg); } }
+@keyframes putCupDown { 0% { opacity: 1; transform: translate(0, 0); } 100% { opacity: 0; transform: translate(-16px, 14px); } }
 
 @media (max-width: 900px) {
   .TopControls { grid-template-columns: 1fr 1fr; }
