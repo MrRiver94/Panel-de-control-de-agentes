@@ -80,6 +80,23 @@ agents: dict[str, AgentState] = {
     "sentinel": AgentState(id="sentinel", name="SENTINEL", role="Control de calidad", tone="#9383ff", token_budget=4500, tokens_used=610, reasoning_effort="low"),
 }
 events: list[ActivityEvent] = []
+last_telemetry_sample = datetime.now(timezone.utc)
+
+
+def apply_live_telemetry() -> None:
+    """Advance the prototype meter between exact agent activity reports."""
+    global last_telemetry_sample
+    sampled_at = now()
+    elapsed_seconds = max(0.0, (sampled_at - last_telemetry_sample).total_seconds())
+    last_telemetry_sample = sampled_at
+    rate_by_effort = {"low": 2, "medium": 4, "high": 7, "xhigh": 11}
+    for agent in agents.values():
+        if agent.status != "running":
+            continue
+        tokens = max(1, round(elapsed_seconds * rate_by_effort[agent.reasoning_effort]))
+        agent.tokens_used = min(agent.token_budget, agent.tokens_used + tokens)
+        if agent.tokens_used >= agent.token_budget:
+            agent.status = "blocked"
 
 
 def now() -> datetime:
@@ -100,6 +117,7 @@ def health() -> dict[str, str]:
 
 @app.get("/api/dashboard")
 def dashboard() -> dict[str, list[dict]]:
+    apply_live_telemetry()
     return {"agents": [agent.model_dump() for agent in agents.values()], "events": [event.model_dump(mode="json") for event in events[:50]]}
 
 

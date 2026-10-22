@@ -22,6 +22,8 @@
   text-shadow: 2px 2px #194340;
 }
 .ClockDate { color: #d9e7d8; font: 8px 'Press Start 2P', monospace; white-space: nowrap; }
+.LivePulse { display: inline-block; width: 7px; height: 7px; margin-left: 7px; background: #d9f45a; box-shadow: 0 0 8px #d9f45a; animation: telemetryPulse 1s steps(2) infinite; }
+.TelemetryStamp { display: block; margin-top: 8px; color: #7ee2e8; font-size: 8px; }
 
 .SlimeUnit {
   z-index: 5; width: 98px; filter: drop-shadow(4px 5px 0 #1a1319);
@@ -68,6 +70,7 @@
 @keyframes slimeWork { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes agentArrival { 50% { transform: translateX(8px) translateY(-4px); } }
 @keyframes labelPulse { 50% { transform: translateY(-2px); } }
+@keyframes telemetryPulse { 50% { opacity: .25; } }
 
 @media (max-width: 900px) {
   .SlimeRoom { min-height: 560px; }
