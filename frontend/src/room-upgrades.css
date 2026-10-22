@@ -212,6 +212,48 @@
 .AuditRecord small { color: #b4ceca; font-size: 8px; }
 .AuditEmpty { padding: 24px 0; color: #b9cbbd; text-align: center; }
 
+/* Agent customizer: the main room remains visible until a deliberate modal edit. */
+.SecondaryButton { width: 100%; margin-top: 8px; padding: 9px; border: 2px solid #72a09a; color: #cdece3; background: #183038; cursor: pointer; font: 8px 'Press Start 2P', monospace; }
+.SecondaryButton:hover, .SecondaryButton:focus-visible { color: #17272a; background: #7ee2e8; outline: none; }
+.CustomizerDialog { width: min(920px, calc(100vw - 28px)); max-height: min(800px, calc(100vh - 28px)); padding: 0; overflow: hidden; border: 4px solid #c78f66; color: #fff1d4; background: #101b25; box-shadow: 8px 8px 0 #070d12; }
+.CustomizerDialog::backdrop { background: #071017c9; backdrop-filter: blur(3px); }
+.CustomizerHeader { display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 2px solid #6c826e; background: #202838; }
+.CustomizerHeader span { display: block; color: #d9f45a; font: 11px 'Press Start 2P', monospace; }
+.CustomizerHeader small { display: block; margin-top: 7px; color: #7ee2e8; font-size: 8px; }
+.CustomizerHeader button { width: 30px; height: 30px; border: 2px solid #d58b82; color: #fff1d4; background: #402b35; cursor: pointer; font: 22px/1 'Space Mono', monospace; }
+.CustomizerBody { display: grid; grid-template-columns: 230px 1fr; max-height: calc(min(800px, 100vh - 28px) - 140px); overflow: auto; }
+.CustomizerPreview { min-height: 390px; padding: 18px; border-right: 2px solid #465f5d; background: linear-gradient(160deg, #152a35, #111d28); text-align: center; }
+.PreviewStage { position: relative; height: 205px; overflow: hidden; border: 3px solid #507b79; background: linear-gradient(160deg, #2b4351 0 48%, #172631 49%); box-shadow: inset 0 -25px #101b24; }
+.PreviewStage::after { content: ''; position: absolute; left: 15%; right: 15%; bottom: 23px; height: 9px; border-radius: 50%; background: #08131c99; filter: blur(1px); }
+.PreviewSlime { --preview-tone: #d9f45a; --preview-hue: 0deg; position: absolute; z-index: 2; left: calc(50% - 29px); bottom: 25px; width: 58px; height: 72px; background: url('assets/slime-mini-sprite-sheet-v2.png') 0 0 / 400% 100% no-repeat; filter: hue-rotate(var(--preview-hue)) saturate(1.08); image-rendering: pixelated; animation: previewBounce 1.5s steps(2) infinite; }
+.CustomizerPreview strong { display: block; margin-top: 15px; color: #fff1d4; font: 10px 'Press Start 2P', monospace; }
+.CustomizerPreview small { display: block; margin-top: 9px; color: #8fbab2; font-size: 9px; }
+.CustomizerPreview p { margin-top: 16px; color: #d9f45a; font-size: 8px; line-height: 1.6; }
+.CustomizerFields { padding: 18px; }
+.CustomizerFields > label, .ProfileTwoColumns label { display: block; margin-bottom: 13px; color: #c7dad0; font-size: 9px; }
+.CustomizerFields input, .CustomizerFields select { width: 100%; margin-top: 6px; min-height: 35px; padding: 7px; border: 2px solid #607f78; color: #fff1d4; background: #102027; font: 11px 'Space Mono', monospace; }
+.CustomizerFields input[type='color'] { padding: 3px; cursor: pointer; }
+.ProfileTwoColumns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.CustomizerFields fieldset { margin: 3px 0 0; padding: 11px; border: 2px solid #546f6a; }
+.CustomizerFields legend { padding: 0 5px; color: #d9f45a; font: 8px 'Press Start 2P', monospace; }
+.ActionChoices { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+.ActionChoices label { display: flex; align-items: center; gap: 6px; color: #d2e4d7; font-size: 9px; }
+.ActionChoices input { width: 14px; min-height: 14px; margin: 0; accent-color: #d9f45a; }
+.CustomizerHint { display: block; min-height: 14px; margin-top: 12px; color: #7ee2e8; font-size: 9px; }
+.CustomizerFooter { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 18px; border-top: 2px solid #465f5d; background: #17272d; }
+.CustomizerFooter .PrimaryButton, .CustomizerFooter .SecondaryButton { margin: 0; }
+@keyframes previewBounce { 50% { transform: translateY(-5px) scaleX(1.05); } }
+@media (max-width: 650px) {
+  .CustomizerBody { grid-template-columns: 1fr; }
+  .CustomizerPreview { min-height: auto; padding: 12px; border-right: 0; border-bottom: 2px solid #465f5d; }
+  .PreviewStage { height: 145px; }
+  .CustomizerPreview strong { margin-top: 10px; }
+  .CustomizerPreview p { margin: 9px 0 0; }
+  .ProfileTwoColumns, .ActionChoices { grid-template-columns: 1fr; }
+  .CustomizerFields { padding: 14px; }
+  .CustomizerHeader span { font-size: 9px; }
+}
+
 @media (max-width: 1100px) {
   .LiveOpsLayout { grid-template-columns: minmax(142px, .28fr) minmax(0, 1fr) minmax(142px, .28fr); gap: 8px; }
   .AgentMiniScene { height: 92px; }

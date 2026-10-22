@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 
 ReasoningEffort = Literal["low", "medium", "high", "xhigh"]
 AgentStatus = Literal["active", "running", "standby", "blocked"]
+IdleMode = Literal["Coffee", "Eating", "Sleep"]
 
 
 class AgentState(BaseModel):
@@ -31,11 +32,25 @@ class AgentState(BaseModel):
     token_budget: int = Field(ge=500, le=24000)
     reasoning_effort: ReasoningEffort = "medium"
     current_task: str = "En espera"
+    display_hue: str = "0deg"
+    idle_mode: IdleMode = "Coffee"
+    default_action: str = "En espera"
+    enabled_actions: list[str] = Field(default_factory=lambda: ["coordinar"])
 
 
 class ControlUpdate(BaseModel):
     token_budget: int = Field(ge=500, le=24000)
     reasoning_effort: ReasoningEffort
+
+
+class ProfileUpdate(BaseModel):
+    name: str = Field(min_length=2, max_length=18)
+    role: str = Field(min_length=2, max_length=42)
+    tone: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
+    display_hue: str = Field(min_length=1, max_length=20)
+    idle_mode: IdleMode
+    default_action: str = Field(min_length=2, max_length=80)
+    enabled_actions: list[str] = Field(min_length=1, max_length=5)
 
 
 class ActivityIn(BaseModel):
@@ -84,12 +99,12 @@ app.add_middleware(
 )
 
 agents: dict[str, AgentState] = {
-    "director": AgentState(id="director", name="DIRECTOR", role="Dirección global", status="active", tone="#ffd166", token_budget=6000, tokens_used=1260, reasoning_effort="high"),
-    "nexus": AgentState(id="nexus", name="NEXUS", role="Coordinador operativo", status="active", tone="#d8ff5c", token_budget=8000, tokens_used=2870, reasoning_effort="high"),
-    "scout": AgentState(id="scout", name="SCOUT", role="Investigación", status="running", tone="#57e5ff", token_budget=5500, tokens_used=1920),
-    "forge": AgentState(id="forge", name="FORGE", role="Constructor", tone="#ff6b9a", token_budget=7000, tokens_used=840),
-    "sentinel": AgentState(id="sentinel", name="SENTINEL", role="Control de calidad", tone="#9383ff", token_budget=4500, tokens_used=610, reasoning_effort="low"),
-    "muse": AgentState(id="muse", name="MUSE", role="Dirección de arte", tone="#ffaf5f", token_budget=6200, tokens_used=430, reasoning_effort="high"),
+    "director": AgentState(id="director", name="DIRECTOR", role="Dirección global", status="active", tone="#ffd166", token_budget=6000, tokens_used=1260, reasoning_effort="high", display_hue="-100deg", idle_mode="Coffee", default_action="priorizando", enabled_actions=["coordinar", "priorizar"]),
+    "nexus": AgentState(id="nexus", name="NEXUS", role="Coordinador operativo", status="active", tone="#d8ff5c", token_budget=8000, tokens_used=2870, reasoning_effort="high", display_hue="68deg", idle_mode="Eating", default_action="planificando", enabled_actions=["coordinar", "planificar"]),
+    "scout": AgentState(id="scout", name="SCOUT", role="Investigación", status="running", tone="#57e5ff", token_budget=5500, tokens_used=1920, display_hue="0deg", idle_mode="Sleep", default_action="investigando", enabled_actions=["investigar", "analizar"]),
+    "forge": AgentState(id="forge", name="FORGE", role="Constructor", tone="#ff6b9a", token_budget=7000, tokens_used=840, display_hue="135deg", idle_mode="Sleep", default_action="construyendo", enabled_actions=["construir", "implementar"]),
+    "sentinel": AgentState(id="sentinel", name="SENTINEL", role="Control de calidad", tone="#9383ff", token_budget=4500, tokens_used=610, reasoning_effort="low", display_hue="230deg", idle_mode="Coffee", default_action="revisando", enabled_actions=["revisar", "auditar"]),
+    "muse": AgentState(id="muse", name="MUSE", role="Dirección de arte", tone="#ffaf5f", token_budget=6200, tokens_used=430, reasoning_effort="high", display_hue="-45deg", idle_mode="Eating", default_action="diseñando", enabled_actions=["diseñar", "ilustrar"]),
 }
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 AUDIT_DATABASE = PROJECT_ROOT / "data" / "agent_activity.sqlite3"
@@ -124,12 +139,57 @@ def create_audit_schema() -> None:
             )
         """)
         connection.execute("CREATE INDEX IF NOT EXISTS activity_events_created_at ON activity_events(created_at DESC)")
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS agent_profiles (
+                agent_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                role TEXT NOT NULL,
+                tone TEXT NOT NULL,
+                display_hue TEXT NOT NULL,
+                idle_mode TEXT NOT NULL,
+                default_action TEXT NOT NULL,
+                enabled_actions TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+        for agent in agents.values():
+            connection.execute(
+                "INSERT OR IGNORE INTO agent_profiles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (agent.id, agent.name, agent.role, agent.tone, agent.display_hue, agent.idle_mode,
+                 agent.default_action, json.dumps(agent.enabled_actions), now().isoformat()),
+            )
         has_events = connection.execute("SELECT 1 FROM activity_events LIMIT 1").fetchone()
         if not has_events:
             connection.execute(
                 "INSERT INTO activity_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (str(uuid4()), "system", "SISTEMA", "audit_ready", "Auditoría persistente activada. Los nuevos eventos sobreviven a reinicios.", 0, 0, 0, 0, now().isoformat()),
             )
+
+
+def load_agent_profiles() -> None:
+    with audit_lock, audit_connection() as connection:
+        rows = connection.execute("SELECT * FROM agent_profiles").fetchall()
+    for row in rows:
+        agent = agents.get(row["agent_id"])
+        if not agent:
+            continue
+        agent.name = row["name"]
+        agent.role = row["role"]
+        agent.tone = row["tone"]
+        agent.display_hue = row["display_hue"]
+        agent.idle_mode = row["idle_mode"]
+        agent.default_action = row["default_action"]
+        agent.enabled_actions = json.loads(row["enabled_actions"])
+
+
+def save_agent_profile(agent: AgentState) -> None:
+    with audit_lock, audit_connection() as connection:
+        connection.execute(
+            """UPDATE agent_profiles SET name=?, role=?, tone=?, display_hue=?, idle_mode=?,
+               default_action=?, enabled_actions=?, updated_at=? WHERE agent_id=?""",
+            (agent.name, agent.role, agent.tone, agent.display_hue, agent.idle_mode,
+             agent.default_action, json.dumps(agent.enabled_actions), now().isoformat(), agent.id),
+        )
 
 
 def save_activity_event(
@@ -259,6 +319,7 @@ def health() -> dict[str, str]:
 @app.on_event("startup")
 def initialise_audit_store() -> None:
     create_audit_schema()
+    load_agent_profiles()
 
 
 @app.get("/api/dashboard")
@@ -310,6 +371,23 @@ def update_controls(agent_id: str, update: ControlUpdate) -> AgentState:
         agent.id, agent.name, "control_updated",
         f"Límite ajustado a {agent.token_budget} tokens y esfuerzo {agent.reasoning_effort}.",
     )
+    return agent
+
+
+@app.post("/api/agents/{agent_id}/profile", response_model=AgentState)
+def update_agent_profile(agent_id: str, update: ProfileUpdate) -> AgentState:
+    agent = get_agent(agent_id)
+    agent.name = update.name.strip().upper()
+    agent.role = update.role.strip()
+    agent.tone = update.tone
+    agent.display_hue = update.display_hue
+    agent.idle_mode = update.idle_mode
+    agent.default_action = update.default_action.strip()
+    agent.enabled_actions = [action.strip().lower() for action in update.enabled_actions]
+    if agent.current_task == "En espera":
+        agent.current_task = agent.default_action
+    save_agent_profile(agent)
+    save_activity_event(agent.id, agent.name, "profile_updated", "Perfil, estilo y acciones habilitadas actualizados.")
     return agent
 
 

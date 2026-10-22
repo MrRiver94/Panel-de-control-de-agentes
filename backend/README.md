@@ -9,7 +9,7 @@ cd backend
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 El frontend se conecta por defecto a `http://127.0.0.1:8000`.
@@ -20,7 +20,10 @@ El frontend se conecta por defecto a `http://127.0.0.1:8000`.
 - `GET /api/activity/history?limit=100`: historial persistente para auditoría (hasta 500 eventos por consulta).
 - `POST /api/agents/{agent_id}/controls`: cambia `token_budget` y `reasoning_effort`.
 - `POST /api/activity`: registra una actividad con tokens de entrada, salida y razonamiento.
+- `POST /api/agents/{agent_id}/profile`: persiste nombre, rol, estilo, descanso y acciones habilitadas.
 
 `reasoning_effort` es una política de ejecución (`low`, `medium`, `high`, `xhigh`), no contenido del pensamiento. Al conectar un proveedor, guarda solo los campos de uso que devuelva su API, como `reasoning_tokens`.
 
 La auditoría registra asignaciones de misiones, cambios de límites/esfuerzo y actividades enviadas a `POST /api/activity`, con tokens de entrada, salida y razonamiento separados.
+
+Consulta `../docs/TECHNICAL_GUIDE.md` para la arquitectura completa, las tablas SQLite y la guía de integración.
