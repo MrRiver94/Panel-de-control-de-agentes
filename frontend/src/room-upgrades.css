@@ -12,8 +12,8 @@
 .CodexSource { display: block; margin-top: 7px; color: #7ee2e8; font-size: 8px; }
 
 .SlimeRoom {
-  min-height: clamp(570px, 66vh, 760px);
-  background: #18242b url('assets/slime-room-background-v3.png') center / cover no-repeat;
+  min-height: clamp(590px, 69vh, 790px);
+  background: #162239 url('assets/slime-hq-isometric-v4.png') center / cover no-repeat;
 }
 
 .RoomWindow, .RoomRug, .RoomPlant, .Bed, .Desk { display: none; }
@@ -41,13 +41,19 @@
   z-index: 5; width: 64px; filter: drop-shadow(2px 3px 0 #1a1319);
   transition: left 1.7s steps(14), top 1.7s steps(14);
 }
+.SlimeUnit::before {
+  content: ''; position: absolute; z-index: 0; left: 8px; bottom: 13px; width: 45px; height: 9px;
+  border-radius: 50%; background: #17203585; filter: blur(1px); transform: skewX(-18deg);
+  transition: width .35s ease, opacity .35s ease;
+}
+.SlimeUnit.Working::before { width: 51px; opacity: .82; }
 .SlimeUnit strong {
   position: relative; z-index: 2; width: max-content; max-width: 74px; margin: -7px auto 0;
   border: 1px solid #a37a5a; background: #101923e9; font-size: 6px;
 }
 .SlimeBody, .Laptop { display: none !important; }
 .SlimeSprite {
-  display: block; width: 58px; height: 72px; margin: auto;
+  position: relative; z-index: 1; display: block; width: 58px; height: 72px; margin: auto;
   background: url('assets/slime-mini-sprite-sheet-v2.png') 0 0 / 400% 100% no-repeat;
   filter: hue-rotate(var(--hue)) saturate(1.04); image-rendering: pixelated;
 }
@@ -91,7 +97,7 @@
 @media (max-width: 900px) {
   .TopControls { grid-template-columns: 1fr 1fr; }
   .CodexUsagePanel, .ActivityPanel { grid-column: span 1; }
-  .SlimeRoom { min-height: 560px; }
+  .SlimeRoom { min-height: 560px; background-position: center; }
   .DigitalClock { top: 62px; right: 14px; transform: scale(.85); transform-origin: top right; }
 }
 @media (max-width: 600px) {
