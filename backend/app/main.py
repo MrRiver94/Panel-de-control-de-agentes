@@ -49,10 +49,24 @@ class ActivityEvent(BaseModel):
     created_at: datetime
 
 
+class DispatchRequest(BaseModel):
+    prompt: str = Field(min_length=3, max_length=2000)
+
+
+class DispatchResponse(BaseModel):
+    agent_ids: list[str]
+    plan: str
+
+
 app = FastAPI(title="AgentOps API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5500", "http://localhost:5500", "http://127.0.0.1:8000"],
+    allow_origins=[
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+        "http://127.0.0.1:8000",
+        "https://agent-roster-pixel-20261022.blondmesa11.chatgpt.site",
+    ],
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
@@ -113,3 +127,26 @@ def record_activity(activity: ActivityIn) -> ActivityEvent:
     )
     events.insert(0, event)
     return event
+
+
+@app.post("/api/dispatch", response_model=DispatchResponse)
+def dispatch_mission(request: DispatchRequest) -> DispatchResponse:
+    """Choose specialists with transparent keyword routing for the prototype."""
+    prompt = request.prompt.lower()
+    chosen = ["director", "nexus"]
+    rules = {
+        "scout": ("investiga", "fuente", "busca", "anali", "compet", "mercado", "research"),
+        "forge": ("crea", "constru", "código", "codigo", "web", "implemen", "diseña", "disena", "programa"),
+        "sentinel": ("revisa", "calidad", "error", "test", "riesgo", "valida", "audita"),
+    }
+    for agent_id, keywords in rules.items():
+        if any(keyword in prompt for keyword in keywords):
+            chosen.append(agent_id)
+    if len(chosen) == 2:
+        chosen.append("scout")
+    for agent_id in chosen:
+        agent = agents[agent_id]
+        agent.status = "running"
+    specialist_names = ", ".join(agents[agent_id].name for agent_id in chosen[2:])
+    plan = f"DIRECTOR prioriza; NEXUS coordina. Especialistas activados: {specialist_names}."
+    return DispatchResponse(agent_ids=chosen, plan=plan)
