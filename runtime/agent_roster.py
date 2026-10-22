@@ -25,10 +25,19 @@ nexus = Agent(
     handoffs=[scout, forge, sentinel],
 )
 
+director = Agent(
+    name="DIRECTOR",
+    instructions=(
+        "Eres la dirección global del roster. Mantén la prioridad estratégica, "
+        "asigna la misión a NEXUS y pide una síntesis ejecutiva cuando termine."
+    ),
+    handoffs=[nexus],
+)
+
 
 def run_mission(objective: str) -> str:
     """Ejecuta una misión. Requiere OPENAI_API_KEY configurada en el entorno."""
-    return Runner.run_sync(nexus, objective).final_output
+    return Runner.run_sync(director, objective).final_output
 
 
 if __name__ == "__main__":
