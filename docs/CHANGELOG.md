@@ -1,5 +1,14 @@
 # Registro de cambios
 
+## 2026-10-22 — Roles, usuarios y agentes persistentes
+
+- AÃ±adidos roles, usuarios y registro de agentes a SQLite.
+- AÃ±adido el Ã¡rbol de acceso con `SUPER-ADMIN` y `OPERADOR DE MISIONES`.
+- AÃ±adida comprobaciÃ³n de permisos para ver, enviar misiones, crear, modificar y eliminar.
+- AÃ±adidos popups para gestionar roles/usuarios y crear agentes desde el panel.
+- Protegidos el super-admin y los seis agentes base contra eliminaciÃ³n accidental.
+- Documentado el carÃ¡cter local y provisional del control de acceso.
+
 ## 2026-10-22 — Personalización y auditoría
 
 - Añadido popup de personalización de agente: identidad, estilo visual, descanso, acción por defecto y acciones habilitadas.

@@ -53,6 +53,22 @@ La base se inicializa al arrancar. Está ignorada por Git para mantener los regi
 | POST | `/api/agents/{id}/profile` | Persiste identidad, estilo y acciones del agente. |
 | GET | `/api/codex-usage` | Lee límites reales del Codex local, con caché corta. |
 
+### Control de acceso y CRUD
+
+La base incorpora estas tablas adicionales:
+
+| Tabla | Contenido |
+| --- | --- |
+| `roles` | Identificador, nombre y lista JSON de permisos. |
+| `users` | Usuario local y rol asignado. |
+| `agent_registry` | Estado completo y persistente de cada agente creado o actualizado. |
+
+Las capacidades son `dashboard.view`, `mission.create`, `agents.create`, `agents.update`, `agents.delete` y `access.manage`. La semilla contiene `super-admin` con `*` y `operador-misiones` con solo `dashboard.view` y `mission.create`.
+
+El frontend transporta el operador activo en `X-Operator-Id` y FastAPI comprueba el permiso en cada mutaciÃ³n. Es una capa local provisional para controlar el panel, no autenticaciÃ³n de red: no debe exponerse fuera de `127.0.0.1` sin identidad real, sesiones firmadas y protecciÃ³n CSRF.
+
+Las rutas CRUD son `GET /api/access/tree`, `POST /api/access/roles`, `POST /api/access/roles/{id}`, `DELETE /api/access/roles/{id}`, y sus equivalentes de usuarios. Los agentes se crean con `POST /api/agents`; los agentes creados pueden eliminarse con `DELETE /api/agents/{id}`. Los seis agentes base y el super-admin estÃ¡n protegidos contra borrado.
+
 ### Integrar un ejecutor real
 
 Cuando exista un runtime, debe:

@@ -32,3 +32,11 @@ Consulta [la guía técnica](docs/TECHNICAL_GUIDE.md) antes de extender el siste
 - Las configuraciones detalladas viven en popups, sin abandonar la sala.
 - La auditoría registra metadatos operativos y uso de tokens, nunca pensamiento interno.
 - Cada cambio visual se compila y se publica sobre la misma URL privada.
+
+## Control de acceso provisional
+
+SQLite guarda tambiÃ©n el Ã¡rbol de roles, usuarios locales y el registro persistente de agentes. La semilla es `SUPER-ADMIN` (todos los permisos) y `OPERADOR DE MISIONES` (solo ver panel y enviar misiones).
+
+Desde el popup `ACCESO`, el Super Admin puede crear, editar y borrar roles y usuarios no protegidos, ademÃ¡s de crear agentes. La API comprueba cada permiso usando el operador local activo.
+
+Este control es local y provisional, no un sistema de autenticaciÃ³n. Antes de exponer la API fuera del equipo, debe sustituirse por inicio de sesiÃ³n real y sesiones emitidas por el servidor.

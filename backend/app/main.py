@@ -12,7 +12,7 @@ from typing import Any
 from typing import Generator, Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -51,6 +51,21 @@ class ProfileUpdate(BaseModel):
     idle_mode: IdleMode
     default_action: str = Field(min_length=2, max_length=80)
     enabled_actions: list[str] = Field(min_length=1, max_length=5)
+
+
+class AgentCreate(ProfileUpdate):
+    token_budget: int = Field(default=5000, ge=500, le=24000)
+    reasoning_effort: ReasoningEffort = "medium"
+
+
+class RoleUpdate(BaseModel):
+    name: str = Field(min_length=2, max_length=32)
+    permissions: list[str] = Field(min_length=1, max_length=30)
+
+
+class UserUpdate(BaseModel):
+    name: str = Field(min_length=2, max_length=42)
+    role_id: str = Field(min_length=2, max_length=32)
 
 
 class ActivityIn(BaseModel):
@@ -94,7 +109,7 @@ app.add_middleware(
         "https://agent-roster-pixel-20261022.blondmesa11.chatgpt.site",
     ],
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -106,6 +121,7 @@ agents: dict[str, AgentState] = {
     "sentinel": AgentState(id="sentinel", name="SENTINEL", role="Control de calidad", tone="#9383ff", token_budget=4500, tokens_used=610, reasoning_effort="low", display_hue="230deg", idle_mode="Coffee", default_action="revisando", enabled_actions=["revisar", "auditar"]),
     "muse": AgentState(id="muse", name="MUSE", role="Dirección de arte", tone="#ffaf5f", token_budget=6200, tokens_used=430, reasoning_effort="high", display_hue="-45deg", idle_mode="Eating", default_action="diseñando", enabled_actions=["diseñar", "ilustrar"]),
 }
+BUILTIN_AGENT_IDS = frozenset(agents)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 AUDIT_DATABASE = PROJECT_ROOT / "data" / "agent_activity.sqlite3"
 audit_lock = threading.Lock()
@@ -139,6 +155,15 @@ def create_audit_schema() -> None:
             )
         """)
         connection.execute("CREATE INDEX IF NOT EXISTS activity_events_created_at ON activity_events(created_at DESC)")
+        connection.execute("CREATE TABLE IF NOT EXISTS roles (id TEXT PRIMARY KEY, name TEXT NOT NULL, permissions TEXT NOT NULL)")
+        connection.execute("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, role_id TEXT NOT NULL)")
+        connection.execute("CREATE TABLE IF NOT EXISTS agent_registry (agent_id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
+        connection.execute("INSERT OR IGNORE INTO roles VALUES (?, ?, ?)", ("super-admin", "SUPER-ADMIN", json.dumps(["*"])))
+        connection.execute("INSERT OR IGNORE INTO roles VALUES (?, ?, ?)", ("mission-operator", "OPERADOR DE MISIONES", json.dumps(["dashboard.view", "mission.create"])))
+        connection.execute("INSERT OR IGNORE INTO users VALUES (?, ?, ?)", ("super-admin", "Super Admin", "super-admin"))
+        connection.execute("INSERT OR IGNORE INTO users VALUES (?, ?, ?)", ("operador-misiones", "Operador limitado", "mission-operator"))
+        for agent in agents.values():
+            connection.execute("INSERT OR IGNORE INTO agent_registry VALUES (?, ?)", (agent.id, json.dumps(agent.model_dump())))
         connection.execute("""
             CREATE TABLE IF NOT EXISTS agent_profiles (
                 agent_id TEXT PRIMARY KEY,
@@ -182,14 +207,46 @@ def load_agent_profiles() -> None:
         agent.enabled_actions = json.loads(row["enabled_actions"])
 
 
+def load_agent_registry() -> None:
+    with audit_lock, audit_connection() as connection:
+        rows = connection.execute("SELECT payload FROM agent_registry").fetchall()
+    for row in rows:
+        agent = AgentState.model_validate(json.loads(row["payload"]))
+        agents[agent.id] = agent
+
+
+def save_agent_registry(agent: AgentState) -> None:
+    with audit_lock, audit_connection() as connection:
+        connection.execute("INSERT OR REPLACE INTO agent_registry VALUES (?, ?)", (agent.id, json.dumps(agent.model_dump())))
+
+
 def save_agent_profile(agent: AgentState) -> None:
     with audit_lock, audit_connection() as connection:
         connection.execute(
-            """UPDATE agent_profiles SET name=?, role=?, tone=?, display_hue=?, idle_mode=?,
-               default_action=?, enabled_actions=?, updated_at=? WHERE agent_id=?""",
-            (agent.name, agent.role, agent.tone, agent.display_hue, agent.idle_mode,
-             agent.default_action, json.dumps(agent.enabled_actions), now().isoformat(), agent.id),
+            "INSERT OR REPLACE INTO agent_profiles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (agent.id, agent.name, agent.role, agent.tone, agent.display_hue, agent.idle_mode,
+             agent.default_action, json.dumps(agent.enabled_actions), now().isoformat()),
         )
+    save_agent_registry(agent)
+
+
+def access_tree() -> dict[str, list[dict[str, Any]]]:
+    with audit_lock, audit_connection() as connection:
+        roles = [dict(row) for row in connection.execute("SELECT * FROM roles ORDER BY id").fetchall()]
+        users = [dict(row) for row in connection.execute("SELECT * FROM users ORDER BY id").fetchall()]
+    return {"roles": [{**role, "permissions": json.loads(role["permissions"])} for role in roles], "users": users}
+
+
+def require_permission(request: Request, permission: str) -> dict[str, Any]:
+    operator_id = request.headers.get("X-Operator-Id", "super-admin")
+    tree = access_tree()
+    user = next((item for item in tree["users"] if item["id"] == operator_id), None)
+    if not user:
+        raise HTTPException(status_code=403, detail="Unknown operator")
+    role = next((item for item in tree["roles"] if item["id"] == user["role_id"]), None)
+    if not role or ("*" not in role["permissions"] and permission not in role["permissions"]):
+        raise HTTPException(status_code=403, detail=f"Permission required: {permission}")
+    return user
 
 
 def save_activity_event(
@@ -319,11 +376,13 @@ def health() -> dict[str, str]:
 @app.on_event("startup")
 def initialise_audit_store() -> None:
     create_audit_schema()
+    load_agent_registry()
     load_agent_profiles()
 
 
 @app.get("/api/dashboard")
-def dashboard() -> dict[str, list[dict]]:
+def dashboard(request: Request) -> dict[str, list[dict]]:
+    require_permission(request, "dashboard.view")
     apply_live_telemetry()
     return dashboard_snapshot()
 
@@ -333,8 +392,92 @@ def dashboard_snapshot() -> dict[str, list[dict]]:
 
 
 @app.get("/api/activity/history", response_model=list[ActivityEvent])
-def activity_history(limit: int = 100) -> list[ActivityEvent]:
+def activity_history(request: Request, limit: int = 100) -> list[ActivityEvent]:
+    require_permission(request, "dashboard.view")
     return read_activity_events(max(1, min(limit, 500)))
+
+
+@app.get("/api/access/tree")
+def get_access_tree(request: Request) -> dict[str, list[dict[str, Any]]]:
+    require_permission(request, "access.manage")
+    return access_tree()
+
+
+@app.post("/api/access/roles")
+def create_role(update: RoleUpdate, request: Request) -> dict[str, Any]:
+    require_permission(request, "access.manage")
+    role_id = "".join(character.lower() if character.isalnum() else "-" for character in update.name).strip("-")
+    if not role_id:
+        raise HTTPException(status_code=422, detail="Invalid role name")
+    with audit_lock, audit_connection() as connection:
+        connection.execute("INSERT INTO roles VALUES (?, ?, ?)", (role_id, update.name.strip().upper(), json.dumps(update.permissions)))
+    save_activity_event("access", "ACCESO", "role_created", f"Rol {role_id} creado.")
+    return access_tree()
+
+
+@app.post("/api/access/users")
+def create_user(update: UserUpdate, request: Request) -> dict[str, Any]:
+    require_permission(request, "access.manage")
+    user_id = "".join(character.lower() if character.isalnum() else "-" for character in update.name).strip("-")
+    with audit_lock, audit_connection() as connection:
+        if not connection.execute("SELECT 1 FROM roles WHERE id=?", (update.role_id,)).fetchone():
+            raise HTTPException(status_code=422, detail="Unknown role")
+        connection.execute("INSERT INTO users VALUES (?, ?, ?)", (user_id, update.name.strip(), update.role_id))
+    save_activity_event("access", "ACCESO", "user_created", f"Usuario {user_id} creado con rol {update.role_id}.")
+    return access_tree()
+
+
+@app.post("/api/access/roles/{role_id}")
+def update_role(role_id: str, update: RoleUpdate, request: Request) -> dict[str, Any]:
+    require_permission(request, "access.manage")
+    if role_id == "super-admin":
+        raise HTTPException(status_code=400, detail="The super-admin role is protected")
+    with audit_lock, audit_connection() as connection:
+        if not connection.execute("SELECT 1 FROM roles WHERE id=?", (role_id,)).fetchone():
+            raise HTTPException(status_code=404, detail="Unknown role")
+        connection.execute("UPDATE roles SET name=?, permissions=? WHERE id=?", (update.name.strip().upper(), json.dumps(update.permissions), role_id))
+    save_activity_event("access", "ACCESO", "role_updated", f"Rol {role_id} actualizado.")
+    return access_tree()
+
+
+@app.delete("/api/access/roles/{role_id}")
+def delete_role(role_id: str, request: Request) -> dict[str, Any]:
+    require_permission(request, "access.manage")
+    if role_id == "super-admin":
+        raise HTTPException(status_code=400, detail="The super-admin role is protected")
+    with audit_lock, audit_connection() as connection:
+        if connection.execute("SELECT 1 FROM users WHERE role_id=?", (role_id,)).fetchone():
+            raise HTTPException(status_code=400, detail="Move users before deleting this role")
+        if not connection.execute("DELETE FROM roles WHERE id=?", (role_id,)).rowcount:
+            raise HTTPException(status_code=404, detail="Unknown role")
+    save_activity_event("access", "ACCESO", "role_deleted", f"Rol {role_id} eliminado.")
+    return access_tree()
+
+
+@app.post("/api/access/users/{user_id}")
+def update_user(user_id: str, update: UserUpdate, request: Request) -> dict[str, Any]:
+    require_permission(request, "access.manage")
+    if user_id == "super-admin":
+        raise HTTPException(status_code=400, detail="The super-admin user is protected")
+    with audit_lock, audit_connection() as connection:
+        if not connection.execute("SELECT 1 FROM roles WHERE id=?", (update.role_id,)).fetchone():
+            raise HTTPException(status_code=422, detail="Unknown role")
+        if not connection.execute("UPDATE users SET name=?, role_id=? WHERE id=?", (update.name.strip(), update.role_id, user_id)).rowcount:
+            raise HTTPException(status_code=404, detail="Unknown user")
+    save_activity_event("access", "ACCESO", "user_updated", f"Usuario {user_id} actualizado.")
+    return access_tree()
+
+
+@app.delete("/api/access/users/{user_id}")
+def delete_user(user_id: str, request: Request) -> dict[str, Any]:
+    require_permission(request, "access.manage")
+    if user_id == "super-admin":
+        raise HTTPException(status_code=400, detail="The super-admin user is protected")
+    with audit_lock, audit_connection() as connection:
+        if not connection.execute("DELETE FROM users WHERE id=?", (user_id,)).rowcount:
+            raise HTTPException(status_code=404, detail="Unknown user")
+    save_activity_event("access", "ACCESO", "user_deleted", f"Usuario {user_id} eliminado.")
+    return access_tree()
 
 
 @app.get("/api/stream")
@@ -363,7 +506,8 @@ def codex_usage() -> dict[str, Any]:
 
 
 @app.post("/api/agents/{agent_id}/controls", response_model=AgentState)
-def update_controls(agent_id: str, update: ControlUpdate) -> AgentState:
+def update_controls(agent_id: str, update: ControlUpdate, request: Request) -> AgentState:
+    require_permission(request, "agents.update")
     agent = get_agent(agent_id)
     agent.token_budget = update.token_budget
     agent.reasoning_effort = update.reasoning_effort
@@ -371,11 +515,13 @@ def update_controls(agent_id: str, update: ControlUpdate) -> AgentState:
         agent.id, agent.name, "control_updated",
         f"Límite ajustado a {agent.token_budget} tokens y esfuerzo {agent.reasoning_effort}.",
     )
+    save_agent_registry(agent)
     return agent
 
 
 @app.post("/api/agents/{agent_id}/profile", response_model=AgentState)
-def update_agent_profile(agent_id: str, update: ProfileUpdate) -> AgentState:
+def update_agent_profile(agent_id: str, update: ProfileUpdate, request: Request) -> AgentState:
+    require_permission(request, "agents.update")
     agent = get_agent(agent_id)
     agent.name = update.name.strip().upper()
     agent.role = update.role.strip()
@@ -389,6 +535,36 @@ def update_agent_profile(agent_id: str, update: ProfileUpdate) -> AgentState:
     save_agent_profile(agent)
     save_activity_event(agent.id, agent.name, "profile_updated", "Perfil, estilo y acciones habilitadas actualizados.")
     return agent
+
+
+@app.post("/api/agents", response_model=AgentState)
+def create_agent(update: AgentCreate, request: Request) -> AgentState:
+    require_permission(request, "agents.create")
+    base_id = "".join(character.lower() if character.isalnum() else "-" for character in update.name).strip("-") or "agent"
+    agent_id = base_id
+    suffix = 2
+    while agent_id in agents:
+        agent_id = f"{base_id}-{suffix}"
+        suffix += 1
+    agent = AgentState(id=agent_id, name=update.name.strip().upper(), role=update.role.strip(), tone=update.tone, token_budget=update.token_budget, reasoning_effort=update.reasoning_effort, display_hue=update.display_hue, idle_mode=update.idle_mode, default_action=update.default_action.strip(), enabled_actions=update.enabled_actions)
+    agents[agent.id] = agent
+    save_agent_profile(agent)
+    save_activity_event(agent.id, agent.name, "agent_created", "Agente creado desde el laboratorio de configuración.")
+    return agent
+
+
+@app.delete("/api/agents/{agent_id}")
+def delete_agent(agent_id: str, request: Request) -> dict[str, str]:
+    require_permission(request, "agents.delete")
+    if agent_id in BUILTIN_AGENT_IDS:
+        raise HTTPException(status_code=400, detail="Los agentes base no se eliminan; personalÃ­zalos o crea un agente nuevo.")
+    agent = get_agent(agent_id)
+    with audit_lock, audit_connection() as connection:
+        connection.execute("DELETE FROM agent_profiles WHERE agent_id=?", (agent_id,))
+        connection.execute("DELETE FROM agent_registry WHERE agent_id=?", (agent_id,))
+    del agents[agent_id]
+    save_activity_event(agent_id, agent.name, "agent_deleted", "Agente eliminado por un super-administrador.")
+    return {"deleted": agent_id}
 
 
 @app.post("/api/activity", response_model=ActivityEvent)
@@ -407,7 +583,8 @@ def record_activity(activity: ActivityIn) -> ActivityEvent:
 
 
 @app.post("/api/dispatch", response_model=DispatchResponse)
-def dispatch_mission(request: DispatchRequest) -> DispatchResponse:
+def dispatch_mission(request: DispatchRequest, http_request: Request) -> DispatchResponse:
+    require_permission(http_request, "mission.create")
     """Choose specialists with transparent keyword routing for the prototype."""
     prompt = request.prompt.lower()
     chosen = ["director", "nexus"]
