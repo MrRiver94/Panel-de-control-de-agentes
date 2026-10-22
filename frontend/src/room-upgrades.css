@@ -1,2 +1,82 @@
-/* High-detail room asset and slime state animations */
-.SlimeRoom{background:#60462f url('assets/slime-room-background-v1.png') center/cover no-repeat}.RoomWindow,.RoomRug,.RoomPlant,.Bed,.Desk{display:none}.RoomHeader{background:#1b2630e6;border-color:#9d7956}.MissionPopup{background:#171f2be9;border-color:#b38162}.WallClock{--hour:0deg;--minute:0deg;position:absolute;z-index:3;top:8%;right:28.6%;width:44px;height:44px;border:4px solid #443538;border-radius:50%;background:#fff3d4;box-shadow:2px 3px 0 #201823}.WallClock i{position:absolute;left:50%;bottom:50%;width:3px;transform-origin:bottom center;background:#30253a}.ClockHour{height:12px;transform:translateX(-50%) rotate(var(--hour))}.ClockMinute{height:16px;transform:translateX(-50%) rotate(var(--minute))}.WallClock b{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;transform:translate(-50%,-50%);background:#ff789d}.SlimeUnit.Resting .SlimeBody{animation:idleWobble 2.5s steps(3) infinite}.SlimeUnit.Coffee .IdleProp,.SlimeUnit.Eating .IdleProp{display:block;position:absolute;left:40px;top:27px;width:13px;height:12px;border:2px solid #322839;background:#fff1d4}.SlimeUnit.Coffee .IdleProp:after{content:'';position:absolute;right:-6px;top:2px;width:4px;height:5px;border:2px solid #322839}.SlimeUnit.Eating .IdleProp{border-radius:50%;background:#ffd166}.SlimeUnit.Resting.Sleep .IdleProp:after{content:'zzz';position:absolute;left:4px;top:-24px;color:#fff1d4;font:bold 11px 'Space Mono',monospace;text-shadow:1px 1px #3a2930}.SlimeUnit.Working .Laptop{animation:screenGlow 1.3s steps(2) infinite}.SlimeUnit.Working .WorkLabel{animation:labelPulse 1.8s steps(2) infinite}@keyframes idleWobble{50%{transform:translateY(2px) scaleX(1.05)}}@keyframes screenGlow{50%{background:#d5ffff;box-shadow:0 0 7px #79e8ee}}@keyframes labelPulse{50%{transform:translateY(-2px)}}
+/* Expanded illustrated room, digital time panel and animated slime sprite system. */
+.SlimeRoom {
+  min-height: clamp(570px, 66vh, 760px);
+  background: #38261f url('assets/slime-room-background-v2.png') center / cover no-repeat;
+}
+
+.RoomWindow, .RoomRug, .RoomPlant, .Bed, .Desk { display: none; }
+.RoomHeader { background: #101b25e8; border-color: #bd8c62; }
+.MissionPopup {
+  right: 2.5%; bottom: 4%; width: min(360px, calc(100% - 30px));
+  background: #101923ee; border-color: #b98763; box-shadow: 6px 6px 0 #090d13;
+}
+
+.DigitalClock {
+  position: absolute; z-index: 7; top: 18px; right: 22px; display: grid; gap: 4px;
+  min-width: 226px; padding: 10px 12px; border: 3px solid #78c9cd;
+  background: #07131be8; box-shadow: 5px 5px 0 #12101c; color: #e9fff6;
+}
+.ClockCaption { color: #7ee2e8; font: 7px 'Press Start 2P', monospace; letter-spacing: 1px; }
+.DigitalClock strong {
+  color: #d9f45a; font: 23px/1 'Space Mono', monospace; letter-spacing: 1px;
+  text-shadow: 2px 2px #194340;
+}
+.ClockDate { color: #d9e7d8; font: 8px 'Press Start 2P', monospace; white-space: nowrap; }
+
+.SlimeUnit {
+  z-index: 5; width: 98px; filter: drop-shadow(4px 5px 0 #1a1319);
+  transition: left 1.7s steps(14), top 1.7s steps(14);
+}
+.SlimeUnit strong {
+  position: relative; z-index: 2; width: max-content; max-width: 110px; margin: -4px auto 0;
+  border: 2px solid #a37a5a; background: #101923e9; font-size: 7px;
+}
+.SlimeBody, .Laptop { display: none !important; }
+.SlimeSprite {
+  display: block; width: 90px; height: 119px; margin: auto;
+  background: url('assets/slime-ops-sprite-sheet-v1.png') 0 0 / 400% 100% no-repeat;
+  filter: hue-rotate(var(--hue)) saturate(1.08); image-rendering: pixelated;
+}
+.SlimeUnit.Resting .SlimeSprite { animation: slimeIdle 2.1s steps(2) infinite; }
+.SlimeUnit.Resting.Sleep .SlimeSprite { background-position: 100% 0; animation: slimeSleep 2.5s steps(2) infinite; }
+.SlimeUnit.Working .SlimeSprite { background-position: 66.666% 0; animation: slimeWork 1s steps(2) infinite; }
+.SlimeUnit.Working { animation: agentArrival .7s steps(3) 2; }
+
+.SlimeUnit.Coffee .IdleProp, .SlimeUnit.Eating .IdleProp {
+  position: absolute; display: block; z-index: 4; left: 66px; top: 68px; width: 16px; height: 15px;
+  border: 2px solid #2c2837; background: #fff1d4; box-shadow: 2px 2px 0 #2c2837;
+}
+.SlimeUnit.Coffee .IdleProp::after {
+  content: ''; position: absolute; right: -7px; top: 2px; width: 5px; height: 7px; border: 2px solid #2c2837;
+}
+.SlimeUnit.Eating .IdleProp { border-radius: 50%; background: #ffbd5c; }
+.SlimeUnit.Resting.Sleep .IdleProp::after {
+  content: 'z z'; position: absolute; left: 22px; top: -30px; width: 44px;
+  color: #d7f8ff; font: bold 13px 'Space Mono', monospace; text-shadow: 2px 2px #1a2230;
+}
+.WorkLabel {
+  z-index: 6; left: 64px; top: -14px; padding: 5px; border-color: #235d63;
+  background: #eaffef; color: #15252c; font-size: 6px; box-shadow: 2px 2px #18373d;
+}
+.SlimeUnit.Working .WorkLabel { animation: labelPulse 1.2s steps(2) infinite; }
+
+@keyframes slimeIdle {
+  0%, 100% { transform: translateY(0) scaleX(1); }
+  50% { transform: translateY(3px) scaleX(1.045); }
+}
+@keyframes slimeSleep { 50% { transform: translateY(2px) scaleX(1.02); } }
+@keyframes slimeWork { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes agentArrival { 50% { transform: translateX(8px) translateY(-4px); } }
+@keyframes labelPulse { 50% { transform: translateY(-2px); } }
+
+@media (max-width: 900px) {
+  .SlimeRoom { min-height: 560px; }
+  .DigitalClock { top: 62px; right: 14px; transform: scale(.85); transform-origin: top right; }
+}
+@media (max-width: 600px) {
+  .SlimeRoom { min-height: 620px; }
+  .DigitalClock { top: 57px; right: 6px; transform: scale(.68); transform-origin: top right; }
+  .SlimeUnit { transform: scale(.76); transform-origin: top left; }
+  .MissionPopup { bottom: 10px; }
+  .SlimeUnit.Working { animation: none; }
+}
