@@ -17,7 +17,9 @@
       <article class="Panel CodexUsagePanel"><div class="PanelTitle">CAPACIDAD CODEX <button id="refreshCodexUsage" type="button" aria-label="Actualizar uso de Codex">↻</button></div><div class="CapacityGrid"><div><span>VENTANA 5H</span><b id="fiveHourRemaining">—</b><small id="fiveHourReset">Cargando…</small></div><div><span>SEMANAL</span><b id="weeklyRemaining">—</b><small id="weeklyReset">Cargando…</small></div></div><div class="CodexFacts"><span id="codexPlan">Plan —</span><span id="resetCredits">Recargas —</span><span id="dailyTokens">Actividad —</span></div><small class="CodexSource" id="codexUsageStatus">Conecta la API local para leer tus límites.</small></article>
       <article class="Panel ActivityPanel"><div class="PanelTitle">ACTIVIDAD</div><div class="ActivityList" id="activityLog"></div></article>
     </section>
-    <section class="SlimeRoom" id="slimeRoom">
+    <section class="LiveOpsLayout" aria-label="Centro de operaciones en directo">
+      <aside class="AgentWatchRail AgentWatchRailLeft" id="agentWatchRailLeft" aria-label="Agentes en directo, columna izquierda"></aside>
+      <section class="SlimeRoom" id="slimeRoom">
       <div class="RoomHeader"><span>SALA EN DIRECTO</span><small id="roomStatus">En espera</small></div>
       <aside class="DigitalClock" id="digitalClock" aria-label="Fecha y hora actual">
         <span class="ClockCaption">HORA LOCAL</span><strong id="digitalTime">00:00:00</strong>
@@ -27,6 +29,8 @@
       <i class="Bed Director"></i><i class="Bed Nexus"></i><i class="Bed Scout"></i><i class="Bed Forge"></i><i class="Bed Sentinel"></i>
       <i class="Desk Director"></i><i class="Desk Nexus"></i><i class="Desk Scout"></i><i class="Desk Forge"></i><i class="Desk Sentinel"></i>
       <form class="MissionPopup" id="missionForm"><label for="missionInput">NUEVA MISIÓN</label><div><input id="missionInput" required autocomplete="off" placeholder="Escribe una orden…" /><button>ENVIAR</button></div><small id="missionSummary">Los slimes descansan.</small></form>
+      </section>
+      <aside class="AgentWatchRail AgentWatchRailRight" id="agentWatchRailRight" aria-label="Agentes en directo, columna derecha"></aside>
     </section>
   </main>
   <script src="app.js"></script>
