@@ -165,6 +165,24 @@
 @keyframes miniLeave { to { opacity: .05; transform: translate(-13px, 17px); } }
 @keyframes detailIn { from { transform: translateY(8px); opacity: .2; } }
 
+/* Larger type hierarchy: pixel style retained, operational data becomes readable. */
+.PanelTitle { font-size: 11px; line-height: 1.35; }
+.ControlFields label, .MetricGrid span, .CapacityGrid span, .CapacityGrid small { font-size: 9px; }
+.ControlFields select, .ControlFields input { font-size: 12px; }
+.EffortButton, .PrimaryButton { font-size: 9px; }
+.MetricGrid b { font-size: 11px; }
+.MetricFoot, .ActivityItem { font-size: 10px; }
+.CapacityGrid b { font-size: 17px; }
+.CodexFacts span, .CodexSource, .TelemetryStamp { font-size: 9px; }
+.AgentWatchTop { font-size: 8px; }
+.AgentWatchTop em, .AgentWatchBottom, .AgentDetailPopover small { font-size: 8px; }
+.AgentWatchRole { line-height: 1.35; }
+.AgentInfoButton { font-size: 7px; padding: 7px; }
+.AgentDetailPopover p { font-size: 10px; }
+.SlimeUnit strong { font-size: 7px; padding: 3px; }
+.WorkLabel { font-size: 6px; }
+.RoomCameraControls span { font-size: 7px; }
+
 /* Wide console frame and bounded camera for the live room. */
 .AppShell { max-width: none; width: 100%; padding: 16px clamp(16px, 1.7vw, 34px) 26px; }
 .SlimeRoom { background: #162239; }
