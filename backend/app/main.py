@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import shutil
+import sqlite3
 import subprocess
 import threading
 import time
@@ -29,6 +30,7 @@ class AgentState(BaseModel):
     tokens_used: int = 0
     token_budget: int = Field(ge=500, le=24000)
     reasoning_effort: ReasoningEffort = "medium"
+    current_task: str = "En espera"
 
 
 class ControlUpdate(BaseModel):
@@ -47,6 +49,7 @@ class ActivityIn(BaseModel):
 
 class ActivityEvent(BaseModel):
     id: str
+    agent_id: str
     agent: str
     kind: str
     message: str
@@ -88,11 +91,71 @@ agents: dict[str, AgentState] = {
     "sentinel": AgentState(id="sentinel", name="SENTINEL", role="Control de calidad", tone="#9383ff", token_budget=4500, tokens_used=610, reasoning_effort="low"),
     "muse": AgentState(id="muse", name="MUSE", role="Dirección de arte", tone="#ffaf5f", token_budget=6200, tokens_used=430, reasoning_effort="high"),
 }
-events: list[ActivityEvent] = []
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+AUDIT_DATABASE = PROJECT_ROOT / "data" / "agent_activity.sqlite3"
+audit_lock = threading.Lock()
 last_telemetry_sample = datetime.now(timezone.utc)
 codex_usage_cache: dict[str, Any] | None = None
 codex_usage_cached_at: datetime | None = None
 codex_usage_lock = threading.Lock()
+
+
+def audit_connection() -> sqlite3.Connection:
+    AUDIT_DATABASE.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(AUDIT_DATABASE)
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def create_audit_schema() -> None:
+    with audit_lock, audit_connection() as connection:
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS activity_events (
+                id TEXT PRIMARY KEY,
+                agent_id TEXT NOT NULL,
+                agent TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                message TEXT NOT NULL,
+                tokens INTEGER NOT NULL,
+                input_tokens INTEGER NOT NULL,
+                output_tokens INTEGER NOT NULL,
+                reasoning_tokens INTEGER NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
+        connection.execute("CREATE INDEX IF NOT EXISTS activity_events_created_at ON activity_events(created_at DESC)")
+        has_events = connection.execute("SELECT 1 FROM activity_events LIMIT 1").fetchone()
+        if not has_events:
+            connection.execute(
+                "INSERT INTO activity_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (str(uuid4()), "system", "SISTEMA", "audit_ready", "Auditoría persistente activada. Los nuevos eventos sobreviven a reinicios.", 0, 0, 0, 0, now().isoformat()),
+            )
+
+
+def save_activity_event(
+    agent_id: str, agent_name: str, kind: str, message: str,
+    input_tokens: int = 0, output_tokens: int = 0, reasoning_tokens: int = 0,
+) -> ActivityEvent:
+    event = ActivityEvent(
+        id=str(uuid4()), agent_id=agent_id, agent=agent_name, kind=kind, message=message,
+        tokens=input_tokens + output_tokens + reasoning_tokens, input_tokens=input_tokens,
+        output_tokens=output_tokens, reasoning_tokens=reasoning_tokens, created_at=now(),
+    )
+    with audit_lock, audit_connection() as connection:
+        connection.execute(
+            "INSERT INTO activity_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (event.id, event.agent_id, event.agent, event.kind, event.message, event.tokens,
+             event.input_tokens, event.output_tokens, event.reasoning_tokens, event.created_at.isoformat()),
+        )
+    return event
+
+
+def read_activity_events(limit: int = 50) -> list[ActivityEvent]:
+    with audit_lock, audit_connection() as connection:
+        rows = connection.execute(
+            "SELECT * FROM activity_events ORDER BY created_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+    return [ActivityEvent(**dict(row)) for row in rows]
 
 
 def apply_live_telemetry() -> None:
@@ -193,6 +256,11 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.on_event("startup")
+def initialise_audit_store() -> None:
+    create_audit_schema()
+
+
 @app.get("/api/dashboard")
 def dashboard() -> dict[str, list[dict]]:
     apply_live_telemetry()
@@ -200,7 +268,12 @@ def dashboard() -> dict[str, list[dict]]:
 
 
 def dashboard_snapshot() -> dict[str, list[dict]]:
-    return {"agents": [agent.model_dump() for agent in agents.values()], "events": [event.model_dump(mode="json") for event in events[:50]]}
+    return {"agents": [agent.model_dump() for agent in agents.values()], "events": [event.model_dump(mode="json") for event in read_activity_events(50)]}
+
+
+@app.get("/api/activity/history", response_model=list[ActivityEvent])
+def activity_history(limit: int = 100) -> list[ActivityEvent]:
+    return read_activity_events(max(1, min(limit, 500)))
 
 
 @app.get("/api/stream")
@@ -233,6 +306,10 @@ def update_controls(agent_id: str, update: ControlUpdate) -> AgentState:
     agent = get_agent(agent_id)
     agent.token_budget = update.token_budget
     agent.reasoning_effort = update.reasoning_effort
+    save_activity_event(
+        agent.id, agent.name, "control_updated",
+        f"Límite ajustado a {agent.token_budget} tokens y esfuerzo {agent.reasoning_effort}.",
+    )
     return agent
 
 
@@ -245,13 +322,10 @@ def record_activity(activity: ActivityIn) -> ActivityEvent:
         agent.status = "blocked"
     elif agent.status == "standby":
         agent.status = "running"
-    event = ActivityEvent(
-        id=str(uuid4()), agent=agent.name, kind=activity.kind, message=activity.message,
-        tokens=tokens, input_tokens=activity.input_tokens, output_tokens=activity.output_tokens,
-        reasoning_tokens=activity.reasoning_tokens, created_at=now(),
+    return save_activity_event(
+        agent.id, agent.name, activity.kind, activity.message,
+        activity.input_tokens, activity.output_tokens, activity.reasoning_tokens,
     )
-    events.insert(0, event)
-    return event
 
 
 @app.post("/api/dispatch", response_model=DispatchResponse)
@@ -271,15 +345,18 @@ def dispatch_mission(request: DispatchRequest) -> DispatchResponse:
     if len(chosen) == 2:
         chosen.append("scout")
     for agent in agents.values():
+        if agent.id not in chosen and agent.status != "standby":
+            save_activity_event(agent.id, agent.name, "mission_paused", "Pasa a espera por reasignación de misión.")
         agent.status = "standby"
+        agent.current_task = "En espera"
     for agent_id in chosen:
         agent = agents[agent_id]
         agent.status = "running"
-        events.insert(0, ActivityEvent(
-            id=str(uuid4()), agent=agent.name, kind="mission_dispatched",
-            message="se ha despertado para una nueva misión", tokens=0,
-            input_tokens=0, output_tokens=0, reasoning_tokens=0, created_at=now(),
-        ))
+        agent.current_task = request.prompt[:120]
+        save_activity_event(
+            agent.id, agent.name, "mission_dispatched",
+            f"Asignado a misión: {request.prompt[:180]}",
+        )
     specialist_names = ", ".join(agents[agent_id].name for agent_id in chosen[2:])
     plan = f"DIRECTOR prioriza; NEXUS coordina. Especialistas activados: {specialist_names}."
     return DispatchResponse(agent_ids=chosen, plan=plan)

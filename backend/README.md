@@ -1,6 +1,6 @@
 # Backend — AgentOps API
 
-API local de observabilidad y control del roster. Mantiene el estado en memoria para la primera versión; una base de datos se añadirá antes de operar en producción.
+API local de observabilidad y control del roster. El historial de actividad se guarda de forma persistente en SQLite en `data/agent_activity.sqlite3`, por lo que sobrevive a reinicios del backend.
 
 ## Ejecutar
 
@@ -16,8 +16,11 @@ El frontend se conecta por defecto a `http://127.0.0.1:8000`.
 
 ## Endpoints
 
-- `GET /api/dashboard`: roster, límites y eventos.
+- `GET /api/dashboard`: roster, límites y los 50 eventos más recientes.
+- `GET /api/activity/history?limit=100`: historial persistente para auditoría (hasta 500 eventos por consulta).
 - `POST /api/agents/{agent_id}/controls`: cambia `token_budget` y `reasoning_effort`.
 - `POST /api/activity`: registra una actividad con tokens de entrada, salida y razonamiento.
 
 `reasoning_effort` es una política de ejecución (`low`, `medium`, `high`, `xhigh`), no contenido del pensamiento. Al conectar un proveedor, guarda solo los campos de uso que devuelva su API, como `reasoning_tokens`.
+
+La auditoría registra asignaciones de misiones, cambios de límites/esfuerzo y actividades enviadas a `POST /api/activity`, con tokens de entrada, salida y razonamiento separados.

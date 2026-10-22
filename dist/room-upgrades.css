@@ -192,6 +192,26 @@
 .RoomCameraControls button { display: grid; width: 22px; height: 21px; place-items: center; padding: 0; border: 1px solid #5f898b; color: #d9f4df; background: #183038; cursor: pointer; font: 14px/1 'Space Mono', monospace; }
 .RoomCameraControls button:hover, .RoomCameraControls button:focus-visible { color: #1b2d30; background: #d9f45a; outline: none; }
 
+/* Persistent audit trail: detailed enough to inspect decisions and token accounting. */
+.ActivityPanel .PanelTitle { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.AuditOpenButton { padding: 5px 6px; border: 1px solid #70a5a4; color: #d8f6ed; background: #183239; cursor: pointer; font: 7px 'Press Start 2P', monospace; }
+.AuditOpenButton:hover, .AuditOpenButton:focus-visible { color: #17272a; background: #7ee2e8; outline: none; }
+.AuditDialog { width: min(860px, calc(100vw - 28px)); max-height: min(760px, calc(100vh - 28px)); padding: 0; overflow: hidden; border: 4px solid #789b8e; color: #fff1d4; background: #101b25; box-shadow: 8px 8px 0 #070d12; }
+.AuditDialog::backdrop { background: #071017c9; backdrop-filter: blur(3px); }
+.AuditDialogHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px; border-bottom: 2px solid #45635e; background: #172b30; }
+.AuditDialogHeader span { display: block; color: #d9f45a; font: 11px 'Press Start 2P', monospace; }
+.AuditDialogHeader small { display: block; margin-top: 7px; color: #7ee2e8; font-size: 9px; }
+.AuditDialogHeader button { width: 30px; height: 30px; border: 2px solid #d58b82; color: #fff1d4; background: #402b35; cursor: pointer; font: 22px/1 'Space Mono', monospace; }
+.AuditCaption { margin: 0; padding: 11px 15px; color: #c6d8ca; border-bottom: 1px solid #42605b; font-size: 10px; }
+.AuditHistory { max-height: calc(min(760px, 100vh - 28px) - 137px); overflow: auto; padding: 4px 15px 15px; }
+.AuditRecord { display: grid; grid-template-columns: 135px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid #ffffff1f; }
+.AuditRecord time { color: #7ee2e8; font-size: 9px; }
+.AuditRecord b { color: #fff1d4; font: 9px 'Press Start 2P', monospace; }
+.AuditRecord em { display: inline-block; margin-left: 8px; padding: 3px 4px; color: #1c2a2c; background: #d9f45a; font: 7px 'Press Start 2P', monospace; font-style: normal; }
+.AuditRecord p { margin: 7px 0; color: #d1ddd4; font-size: 10px; }
+.AuditRecord small { color: #b4ceca; font-size: 8px; }
+.AuditEmpty { padding: 24px 0; color: #b9cbbd; text-align: center; }
+
 @media (max-width: 1100px) {
   .LiveOpsLayout { grid-template-columns: minmax(142px, .28fr) minmax(0, 1fr) minmax(142px, .28fr); gap: 8px; }
   .AgentMiniScene { height: 92px; }
