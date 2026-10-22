@@ -38,18 +38,18 @@
 .TelemetryStamp { display: block; margin-top: 8px; color: #7ee2e8; font-size: 8px; }
 
 .SlimeUnit {
-  z-index: 5; width: 98px; filter: drop-shadow(4px 5px 0 #1a1319);
+  z-index: 5; width: 64px; filter: drop-shadow(2px 3px 0 #1a1319);
   transition: left 1.7s steps(14), top 1.7s steps(14);
 }
 .SlimeUnit strong {
-  position: relative; z-index: 2; width: max-content; max-width: 110px; margin: -4px auto 0;
-  border: 2px solid #a37a5a; background: #101923e9; font-size: 7px;
+  position: relative; z-index: 2; width: max-content; max-width: 74px; margin: -7px auto 0;
+  border: 1px solid #a37a5a; background: #101923e9; font-size: 6px;
 }
 .SlimeBody, .Laptop { display: none !important; }
 .SlimeSprite {
-  display: block; width: 90px; height: 119px; margin: auto;
-  background: url('assets/slime-ops-sprite-sheet-v1.png') 0 0 / 400% 100% no-repeat;
-  filter: hue-rotate(var(--hue)) saturate(1.08); image-rendering: pixelated;
+  display: block; width: 58px; height: 72px; margin: auto;
+  background: url('assets/slime-mini-sprite-sheet-v2.png') 0 0 / 400% 100% no-repeat;
+  filter: hue-rotate(var(--hue)) saturate(1.04); image-rendering: pixelated;
 }
 .SlimeUnit.Resting .SlimeSprite { animation: slimeIdle 2.1s steps(2) infinite; }
 .SlimeUnit.Resting.Sleep .SlimeSprite { background-position: 100% 0; animation: slimeSleep 2.5s steps(2) infinite; }
@@ -59,20 +59,20 @@
 .SlimeUnit.Moving strong { animation: nameWalk .35s steps(2) infinite; }
 
 .SlimeUnit.Coffee .IdleProp, .SlimeUnit.Eating .IdleProp {
-  position: absolute; display: block; z-index: 4; left: 66px; top: 68px; width: 16px; height: 15px;
-  border: 2px solid #2c2837; background: #fff1d4; box-shadow: 2px 2px 0 #2c2837;
+  position: absolute; display: block; z-index: 4; left: 42px; top: 42px; width: 10px; height: 9px;
+  border: 1px solid #2c2837; background: #fff1d4; box-shadow: 1px 1px 0 #2c2837;
 }
 .SlimeUnit.Coffee .IdleProp::after {
-  content: ''; position: absolute; right: -7px; top: 2px; width: 5px; height: 7px; border: 2px solid #2c2837;
+  content: ''; position: absolute; right: -5px; top: 1px; width: 3px; height: 4px; border: 1px solid #2c2837;
 }
 .SlimeUnit.Eating .IdleProp { border-radius: 50%; background: #ffbd5c; }
 .SlimeUnit.Resting.Sleep .IdleProp::after {
-  content: 'z z'; position: absolute; left: 22px; top: -30px; width: 44px;
-  color: #d7f8ff; font: bold 13px 'Space Mono', monospace; text-shadow: 2px 2px #1a2230;
+  content: 'z'; position: absolute; left: 12px; top: -16px; width: 18px;
+  color: #d7f8ff; font: bold 9px 'Space Mono', monospace; text-shadow: 1px 1px #1a2230;
 }
 .WorkLabel {
-  z-index: 6; left: 64px; top: -14px; padding: 5px; border-color: #235d63;
-  background: #eaffef; color: #15252c; font-size: 6px; box-shadow: 2px 2px #18373d;
+  z-index: 6; left: 41px; top: -8px; padding: 3px; border-color: #235d63;
+  background: #eaffef; color: #15252c; font-size: 5px; box-shadow: 1px 1px #18373d;
 }
 .SlimeUnit.Working .WorkLabel { animation: labelPulse 1.2s steps(2) infinite; }
 
