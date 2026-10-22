@@ -307,3 +307,42 @@
 .AccessRow button[data-role-delete], .AccessRow button[data-user-delete] { border-color: #bf7183; color: #ffd4dc; background: #3b2530; }
 .AccessRow small { color: #ffcc7c; font-size: 8px; }
 @media (max-width: 520px) { .AccessGrid { grid-template-columns: 1fr; } .AccessDialog { width: calc(100vw - 18px); } }
+
+/* Premium break-time props: generated transparent pixel art with state-specific motion. */
+.SlimeUnit.Resting:not(.Sleep) .IdleProp {
+  display: block; z-index: 4; left: 37px; top: 25px; width: 49px; height: 42px; border: 0; border-radius: 0;
+  background: url('assets/slime-break-props-v1.png') 0 0 / 200% 200% no-repeat; box-shadow: none;
+  image-rendering: pixelated; transform-origin: 20% 90%;
+}
+.SlimeUnit.Resting:not(.Sleep) .IdleProp::after { content: none; }
+.SlimeUnit[data-break='coffee'] .IdleProp { background-position: 0 0; animation: coffeeSip 2.8s steps(4) infinite; }
+.SlimeUnit[data-break='gameboy'] .IdleProp { background-position: 100% 0; animation: gamePlay .78s steps(2) infinite; }
+.SlimeUnit[data-break='phone'] .IdleProp { background-position: 0 100%; animation: phoneRing 1.6s steps(3) infinite; }
+.SlimeUnit[data-break='talk'] .IdleProp { background-position: 100% 100%; animation: talkBubble 1.7s steps(3) infinite; }
+.SlimeUnit.Resting[data-break='coffee'] .SlimeSprite { animation: slimeSip 2.8s steps(4) infinite; }
+.SlimeUnit.Resting[data-break='gameboy'] .SlimeSprite { animation: slimeGame 1s steps(2) infinite; }
+.SlimeUnit.Resting[data-break='phone'] .SlimeSprite { animation: slimePhone 1.6s steps(3) infinite; }
+.SlimeUnit.Resting[data-break='talk'] .SlimeSprite { animation: slimeTalk 1.7s steps(3) infinite; }
+.SlimeUnit.Resting[data-break='talk'] .IdleProp { left: 36px; top: 16px; }
+@keyframes coffeeSip { 0%, 63%, 100% { transform: translate(0, 5px) rotate(0); } 72%, 86% { transform: translate(-10px, -7px) rotate(-8deg); } }
+@keyframes slimeSip { 0%, 63%, 100% { transform: translateY(0) scaleX(1); } 72%, 86% { transform: translateY(2px) scaleX(1.05); } }
+@keyframes gamePlay { 50% { transform: translate(-3px, -2px) rotate(-4deg); } }
+@keyframes slimeGame { 50% { transform: translateY(2px) rotate(1deg) scaleX(1.04); } }
+@keyframes phoneRing { 0%, 56%, 100% { transform: translate(0, 3px) rotate(0); } 61%, 74% { transform: translate(-3px, 1px) rotate(-7deg); } 68%, 80% { transform: translate(3px, 1px) rotate(7deg); } }
+@keyframes slimePhone { 50% { transform: translateY(2px) rotate(-2deg); } }
+@keyframes talkBubble { 0%, 100% { transform: translateY(2px) scale(.88); opacity: .7; } 50% { transform: translateY(-5px) scale(1); opacity: 1; } }
+@keyframes slimeTalk { 50% { transform: translateY(-2px) scaleX(1.05); } }
+
+.AgentWatchCard.Resting .MiniCoffee {
+  width: 39px; height: 33px; left: 12px; bottom: 15px; border: 0; border-radius: 0; background: url('assets/slime-break-props-v1.png') 0 0 / 200% 200% no-repeat; box-shadow: none;
+  image-rendering: pixelated;
+}
+.AgentWatchCard.Resting .MiniCoffee::after { content: none; }
+.AgentWatchCard.Resting[data-break='coffee'] .MiniCoffee { background-position: 0 0; animation: miniCoffeeSteam 2.8s steps(4) infinite; }
+.AgentWatchCard.Resting[data-break='gameboy'] .MiniCoffee { background-position: 100% 0; animation: miniGamePlay .8s steps(2) infinite; }
+.AgentWatchCard.Resting[data-break='phone'] .MiniCoffee { background-position: 0 100%; animation: miniPhoneRing 1.5s steps(3) infinite; }
+.AgentWatchCard.Resting[data-break='talk'] .MiniCoffee { background-position: 100% 100%; animation: miniTalk .9s steps(2) infinite; }
+@keyframes miniCoffeeSteam { 50% { transform: translateY(-3px) scale(1.04); } }
+@keyframes miniGamePlay { 50% { transform: rotate(-4deg) translateY(-2px); } }
+@keyframes miniPhoneRing { 50% { transform: rotate(7deg); } }
+@keyframes miniTalk { 50% { transform: translateY(-3px); } }
