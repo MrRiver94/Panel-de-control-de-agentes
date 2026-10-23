@@ -36,6 +36,48 @@ Object.assign(LoungeRoutes, {
   sentinel:[[57,51],[55,47],[53,51]], muse:[[49,61],[47,56],[51,55]]
 });
 const State = { agents: structuredClone(DemoAgents), events: [], auditEvents: [], access: null, operatorId: localStorage.getItem('slimeops-operator') || 'super-admin', selectedAgentId: 'nexus', profileAgentId: 'nexus', connected: false, lastTelemetryAt: null, codexUsage: null, agentUsageSeries: null, modelCatalog: FallbackModelCatalog, controlDrafts: new Map(), dashboardReady: false, knownDispatches: new Set(), eventSource: null, buildId: null, openAgentId: null, roomZoom: 1, roomPan: 0, roomPanY: 0 };
+const RoomStateKey = 'slimeops-room-v6';
+const validPoint = (point) => Array.isArray(point) && point.length === 2 && point.every((value) => Number.isFinite(value) && value >= 0 && value <= 100);
+function readRoomState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(RoomStateKey));
+    return saved?.savedAt > Date.now() - 86400000 && saved?.savedAt <= Date.now() && saved.agents && typeof saved.agents === 'object' ? saved.agents : {};
+  } catch { return {}; }
+}
+const SavedRoomAgents = readRoomState();
+function restoreRoomAgent(agent) {
+  const saved = SavedRoomAgents[agent.id];
+  if (!saved || !validPoint(saved.position) || !['rest', 'work'].includes(saved.roomZone)) return agent;
+  agent.position = [...saved.position];
+  agent.roomZone = saved.roomZone;
+  agent.status = saved.status === 'working' ? 'working' : 'sleeping';
+  agent.visualPhase = saved.visualPhase === 'commuting' ? 'commuting' : agent.roomZone === 'work' ? 'working' : undefined;
+  agent.loungeStep = Number.isInteger(saved.loungeStep) ? saved.loungeStep : undefined;
+  if (validPoint(saved.sleep)) agent.sleep = [...saved.sleep];
+  if (Array.isArray(saved.route) && saved.route.length >= 2 && saved.route.length <= 12 && saved.route.every(validPoint) && Number.isInteger(saved.routeIndex) && saved.routeIndex >= 0 && saved.routeIndex < saved.route.length - 1 && Number.isFinite(saved.segmentStart) && saved.segmentStart <= Date.now() && ['rest', 'work'].includes(saved.routeTarget)) {
+    agent.route = saved.route.map((point) => [...point]);
+    agent.routeIndex = saved.routeIndex;
+    agent.segmentStart = saved.segmentStart;
+    agent.routeTarget = saved.routeTarget;
+    agent.nextRoomZone = ['rest', 'work'].includes(saved.nextRoomZone) ? saved.nextRoomZone : undefined;
+    agent.visualPhase = saved.visualPhase === 'commuting' ? 'commuting' : undefined;
+    agent.moving = true;
+  }
+  agent.roomStateRestored = true;
+  return agent;
+}
+State.agents.forEach(restoreRoomAgent);
+function saveRoomState() {
+  try {
+    const agents = Object.fromEntries(State.agents.map((agent) => [agent.id, {
+      position: agent.position, sleep: agent.sleep, roomZone: agent.roomZone, status: agent.status,
+      visualPhase: agent.visualPhase, loungeStep: agent.loungeStep, route: agent.route,
+      routeIndex: agent.routeIndex, segmentStart: agent.segmentStart, routeTarget: agent.routeTarget,
+      nextRoomZone: agent.nextRoomZone
+    }]));
+    localStorage.setItem(RoomStateKey, JSON.stringify({savedAt:Date.now(), agents}));
+  } catch { /* Storage can be unavailable in private browsing. */ }
+}
 const $ = (selector) => document.querySelector(selector);
 const formatNumber = (value) => new Intl.NumberFormat('es-ES').format(value);
 const uppercase = (value) => value.toUpperCase();
@@ -47,7 +89,7 @@ function renderAccess() { const tree = State.access; if (!tree) return; $('#acti
 async function openAccess() { try { State.access = await fetchApi('/api/access/tree'); renderAccess(); renderAccessActions(); $('#accessDialog').showModal(); } catch { alert('No tienes permiso para gestionar accesos.'); } }
 function renderAccessActions() { const tree = State.access; if (!tree || $('#accessActions')) return; const roleCards = tree.roles.map((role) => `<div class="AccessRow"><span>ROL: ${role.name}</span>${role.id === 'super-admin' ? '<small>PROTEGIDO</small>' : `<button data-role-edit="${role.id}">EDITAR</button><button data-role-delete="${role.id}">BORRAR</button>`}</div>`).join(''); const userCards = tree.users.map((user) => `<div class="AccessRow"><span>USUARIO: ${user.name}</span>${user.id === 'super-admin' ? '<small>PROTEGIDO</small>' : `<button data-user-edit="${user.id}">EDITAR</button><button data-user-delete="${user.id}">BORRAR</button>`}</div>`).join(''); const selected = getSelectedAgent(); const agentAction = selected && !DemoAgents.some((agent) => agent.id === selected.id) ? `<button class="SecondaryButton" data-agent-delete="${selected.id}">ELIMINAR ${selected.name}</button>` : ''; $('#accessTree').insertAdjacentHTML('afterend', `<section class="AccessActions" id="accessActions"><button class="PrimaryButton" id="openCreateAgent" type="button">+ CREAR AGENTE</button>${agentAction}<h3>GESTIÓN CRUD</h3>${roleCards}${userCards}</section>`); }
 function refreshAccessActions() { $('#accessActions')?.remove(); renderAccessActions(); }
-function buildVisualAgent(remote) { const stations = Object.values(RoomStations); const station = RoomStations[remote.id] || stations[State.agents.length % stations.length]; return {...remote, hue:remote.display_hue || '0deg', sleep:[...station.rest], work:[...station.desk], position:[...station.rest], roomZone:'rest', action:remote.default_action || 'en espera', visualPhase:undefined}; }
+function buildVisualAgent(remote) { const stations = Object.values(RoomStations); const station = RoomStations[remote.id] || stations[State.agents.length % stations.length]; return restoreRoomAgent({...remote, hue:remote.display_hue || '0deg', sleep:[...station.rest], work:[...station.desk], position:[...station.rest], roomZone:'rest', action:remote.default_action || 'en espera', visualPhase:undefined}); }
 function selectedCreateActions() { return [...document.querySelectorAll('#createAgentActions input:checked')].map((input) => input.value); }
 function bindAgentCreation() { $('#accessDialog').addEventListener('click', async (event) => { const button = event.target.closest('button'); if (!button) return; if (button.id === 'openCreateAgent') { $('#createAgentDialog').showModal(); return; } try { if (button.dataset.roleEdit) { const role = State.access.roles.find((item) => item.id === button.dataset.roleEdit); const name = prompt('Nombre del rol', role.name); if (!name) return; const permissions = prompt('Permisos separados por coma', role.permissions.join(',')); if (!permissions) return; State.access = await fetchApi(`/api/access/roles/${role.id}`, {method:'POST', body:JSON.stringify({name, permissions:permissions.split(',').map((item) => item.trim()).filter(Boolean)})}); renderAccess(); refreshAccessActions(); } if (button.dataset.roleDelete && confirm('¿Eliminar este rol?')) { State.access = await fetchApi(`/api/access/roles/${button.dataset.roleDelete}`, {method:'DELETE'}); renderAccess(); refreshAccessActions(); } if (button.dataset.userEdit) { const user = State.access.users.find((item) => item.id === button.dataset.userEdit); const name = prompt('Nombre del usuario', user.name); if (!name) return; const role_id = prompt(`Rol (${State.access.roles.map((role) => role.id).join(', ')})`, user.role_id); if (!role_id) return; State.access = await fetchApi(`/api/access/users/${user.id}`, {method:'POST', body:JSON.stringify({name, role_id})}); renderAccess(); refreshAccessActions(); } if (button.dataset.userDelete && confirm('¿Eliminar este usuario?')) { State.access = await fetchApi(`/api/access/users/${button.dataset.userDelete}`, {method:'DELETE'}); renderAccess(); refreshAccessActions(); } } catch (error) { alert(`No se pudo guardar: ${error.message}`); } }); $('#closeCreateAgent').addEventListener('click', () => $('#createAgentDialog').close()); $('#createAgentForm').addEventListener('submit', async (event) => { event.preventDefault(); const enabled_actions = selectedCreateActions(); if (!enabled_actions.length) return; const payload = {name:$('#createAgentName').value.trim(), role:$('#createAgentRole').value.trim(), tone:$('#createAgentTone').value, display_hue:'0deg', idle_mode:$('#createAgentIdle').value, default_action:$('#createAgentAction').value.trim(), enabled_actions, token_budget:Number($('#createAgentBudget').value), reasoning_effort:$('#createAgentEffort').value}; try { const created = await fetchApi('/api/agents', {method:'POST', body:JSON.stringify(payload)}); State.agents.push(buildVisualAgent(created)); State.selectedAgentId = created.id; renderDashboard(); $('#createAgentDialog').close(); } catch (error) { alert(`No se pudo crear el agente: ${error.message}`); } }); }
 
@@ -112,31 +154,35 @@ function routeToRoom(agent, zone) {
     ? [[...(agent.position || agent.sleep)], [49,48], ...corridor, [...destination]]
     : [[...(agent.position || agent.work)], ...corridor, [49,48], [...destination]];
   agent.routeIndex = 0;
-  agent.segmentStart = 0;
+  agent.segmentStart = Date.now();
   agent.routeTarget = zone;
   agent.visualPhase = 'commuting';
   agent.moving = true;
 }
-function advanceRoomRoutes(now) {
+function advanceRoomRoutes() {
+  const now = Date.now();
   const world = $('#roomWorld');
   State.agents.forEach((agent) => {
     if (!agent.route) return;
-    const start = agent.route[agent.routeIndex];
-    const end = agent.route[agent.routeIndex + 1];
-    if (!agent.segmentStart) agent.segmentStart = now;
-    const distance = Math.hypot(end[0] - start[0], end[1] - start[1]);
-    const progress = Math.min(1, (now - agent.segmentStart) / Math.max(300, distance * 115));
-    agent.position = [start[0] + (end[0] - start[0]) * progress, start[1] + (end[1] - start[1]) * progress];
-    if (progress === 1) {
+    // Wall-clock time lets a route catch up after reload or a backgrounded tab.
+    for (let step = 0; agent.route && step < 24; step++) {
+      const start = agent.route[agent.routeIndex];
+      const end = agent.route[agent.routeIndex + 1];
+      const distance = Math.hypot(end[0] - start[0], end[1] - start[1]);
+      const duration = Math.max(300, distance * 115);
+      const progress = Math.max(0, Math.min(1, (now - agent.segmentStart) / duration));
+      agent.position = [start[0] + (end[0] - start[0]) * progress, start[1] + (end[1] - start[1]) * progress];
+      if (progress < 1) break;
       agent.routeIndex += 1;
-      agent.segmentStart = now;
+      agent.segmentStart += duration;
       if (agent.routeIndex === agent.route.length - 1) {
         agent.roomZone = agent.routeTarget;
         agent.route = null;
         agent.moving = false;
         agent.visualPhase = agent.roomZone === 'work' ? 'working' : undefined;
-        if (agent.nextRoomZone && agent.nextRoomZone !== agent.roomZone) routeToRoom(agent, agent.nextRoomZone);
+        const nextZone = agent.nextRoomZone;
         agent.nextRoomZone = undefined;
+        if (nextZone && nextZone !== agent.roomZone) routeToRoom(agent, nextZone);
       }
     }
     const element = world.querySelector(`[data-agent-id="${agent.id}"]`);
@@ -153,17 +199,17 @@ function updateConnectionLabel() { $('#apiStatus').textContent = State.connected
 function updateDigitalClock() { const now = new Date(); $('#digitalTime').textContent = now.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false}); const date = new Intl.DateTimeFormat('es-ES', {weekday:'long', day:'2-digit', month:'short', year:'numeric'}).format(now).replace('.', '').toUpperCase(); $('#digitalDate').textContent = date.replace(',', ' ·'); }
 function triggerWorkAnimation(agentIds) { State.agents.filter((agent) => agentIds.includes(agent.id)).forEach((agent) => { agent.status = 'working'; routeToRoom(agent, 'work'); }); renderSlimeRoom(); }
 function detectRemoteDispatches(events) { const dispatches = events.filter((event) => event.kind === 'mission_dispatched'); if (!State.dashboardReady) { dispatches.forEach((event) => State.knownDispatches.add(event.id)); State.dashboardReady = true; return; } const agentIds = dispatches.filter((event) => !State.knownDispatches.has(event.id)).map((event) => { State.knownDispatches.add(event.id); return State.agents.find((agent) => agent.name === event.agent)?.id; }).filter(Boolean); triggerWorkAnimation([...new Set(agentIds)]); }
-function consumeDashboard(dashboard) { dashboard.agents.forEach((remoteAgent) => { let localAgent = State.agents.find((agent) => agent.id === remoteAgent.id); if (!localAgent) { localAgent = buildVisualAgent(remoteAgent); State.agents.push(localAgent); } const status = remoteAgent.status === 'running' ? 'working' : 'sleeping'; Object.assign(localAgent, remoteAgent, {status, hue: remoteAgent.display_hue || localAgent.hue, action: remoteAgent.current_task === 'En espera' ? (remoteAgent.default_action || localAgent.action) : remoteAgent.current_task}); routeToRoom(localAgent, status === 'working' ? 'work' : 'rest'); }); const remoteIds = new Set(dashboard.agents.map((agent) => agent.id)); State.agents = State.agents.filter((agent) => remoteIds.has(agent.id)); if (!State.agents.some((agent) => agent.id === State.selectedAgentId)) State.selectedAgentId = State.agents[0]?.id; detectRemoteDispatches(dashboard.events || []); State.events = dashboard.events || []; State.connected = true; State.lastTelemetryAt = new Date(); updateConnectionLabel(); renderDashboard(); }
+function consumeDashboard(dashboard) { dashboard.agents.forEach((remoteAgent) => { let localAgent = State.agents.find((agent) => agent.id === remoteAgent.id); const isNew = !localAgent; if (isNew) { localAgent = buildVisualAgent(remoteAgent); State.agents.push(localAgent); } const status = remoteAgent.status === 'running' ? 'working' : 'sleeping'; if (!localAgent.roomStateRestored && !localAgent.route && status === 'working' && (State.dashboardReady === false || isNew)) { localAgent.position = [...localAgent.work]; localAgent.roomZone = 'work'; localAgent.visualPhase = 'working'; } Object.assign(localAgent, remoteAgent, {status, hue: remoteAgent.display_hue || localAgent.hue, action: remoteAgent.current_task === 'En espera' ? (remoteAgent.default_action || localAgent.action) : remoteAgent.current_task}); routeToRoom(localAgent, status === 'working' ? 'work' : 'rest'); }); const remoteIds = new Set(dashboard.agents.map((agent) => agent.id)); State.agents = State.agents.filter((agent) => remoteIds.has(agent.id)); if (!State.agents.some((agent) => agent.id === State.selectedAgentId)) State.selectedAgentId = State.agents[0]?.id; detectRemoteDispatches(dashboard.events || []); State.events = dashboard.events || []; State.connected = true; State.lastTelemetryAt = new Date(); updateConnectionLabel(); renderDashboard(); }
 async function syncDashboard() { consumeDashboard(await fetchApi('/api/dashboard')); }
-function connectLiveStream() { if (State.eventSource) return; const stream = new EventSource(`${API_URL}/api/stream`); State.eventSource = stream; stream.onmessage = (event) => { try { consumeDashboard(JSON.parse(event.data)); } catch {} }; stream.onerror = () => { stream.close(); State.eventSource = null; }; }
+function connectLiveStream() { if (State.eventSource) return; const stream = new EventSource(`${API_URL}/api/stream`); State.eventSource = stream; stream.onmessage = (event) => { try { consumeDashboard(JSON.parse(event.data)); } catch {} }; stream.onerror = () => { stream.close(); if (State.eventSource === stream) { State.eventSource = null; setTimeout(connectLiveStream, 2500); } }; }
 async function checkForDeployment() { const response = await fetch(`app-version.json?check=${Date.now()}`, {cache:'no-store'}); if (!response.ok) return; const {buildId} = await response.json(); if (State.buildId && State.buildId !== buildId) { window.location.reload(); return; } State.buildId = buildId; }
 async function syncCodexUsage() { const usage = await fetchApi('/api/codex-usage'); State.codexUsage = usage; renderCodexUsage(); renderCodexUsageChart(); }
 async function syncUsageSeries() { State.agentUsageSeries = await fetchApi('/api/usage-series?minutes=60'); renderAgentUsageChart(); }
 function runLocalTelemetry() { if (State.connected) return; let changed = false; State.agents.forEach((agent) => { if (agent.status !== 'working') return; const rates = {low: 2, medium: 4, high: 7, xhigh: 11}; agent.tokens_used = Math.min(agent.token_budget, agent.tokens_used + rates[agent.reasoning_effort]); if (agent.tokens_used >= agent.token_budget) agent.status = 'sleeping'; changed = true; }); if (changed) { State.lastTelemetryAt = new Date(); renderMetricsPanel(); } }
-function makeSlimesWander() { State.agents.filter((agent) => agent.status !== 'working' && !agent.route && agent.roomZone === 'rest').forEach((agent) => { const stops = LoungeRoutes[agent.id] || SharedRestStops; agent.loungeStep = ((agent.loungeStep ?? -1) + 1) % stops.length; agent.sleep = [...stops[agent.loungeStep]]; agent.route = [[...agent.position], [...agent.sleep]]; agent.routeIndex = 0; agent.segmentStart = 0; agent.routeTarget = 'rest'; agent.moving = true; }); }
+function makeSlimesWander() { State.agents.filter((agent) => agent.status !== 'working' && !agent.route && agent.roomZone === 'rest').forEach((agent) => { const stops = LoungeRoutes[agent.id] || SharedRestStops; agent.loungeStep = ((agent.loungeStep ?? -1) + 1) % stops.length; agent.sleep = [...stops[agent.loungeStep]]; agent.route = [[...agent.position], [...agent.sleep]]; agent.routeIndex = 0; agent.segmentStart = Date.now(); agent.routeTarget = 'rest'; agent.moving = true; }); }
 function localRouteMission(prompt) { const value = prompt.toLowerCase(); const selected = ['director','nexus']; if (/investiga|fuente|busca|compet|analiza/.test(value)) selected.push('scout'); if (/crea|constru|código|codigo|web|diseña|disena/.test(value)) selected.push('forge'); if (/revisa|calidad|error|test|riesgo/.test(value)) selected.push('sentinel'); if (/diseño|diseno|visual|estética|estetica|ui|ux|pixel|animación|animacion|ilustración|ilustracion|arte|estilo|interfaz|layout/.test(value)) selected.push('muse'); return [...new Set(selected.length === 2 ? [...selected, 'scout'] : selected)]; }
 async function submitMission(event) { event.preventDefault(); const input = $('#missionInput'); const prompt = input.value.trim(); if (!prompt) return; let assigned = localRouteMission(prompt); State.agents.forEach((agent) => { if (!assigned.includes(agent.id)) { agent.status = 'sleeping'; routeToRoom(agent, 'rest'); } }); triggerWorkAnimation(assigned); $('#missionSummary').textContent = 'Trabajo iniciado. Los slimes van hacia su despacho…'; input.value = ''; renderDashboard(); try { const result = await fetchApi('/api/dispatch', {method:'POST', body:JSON.stringify({prompt})}); assigned = result.agent_ids; triggerWorkAnimation(assigned); $('#missionSummary').textContent = result.plan; } catch { $('#missionSummary').textContent = 'Misión iniciada en modo demo.'; } }
 async function saveAgentControls() { const agent = getSelectedAgent(); const {dirty, ...draft} = getControlDraft(agent); draft.token_budget = Number($('#budgetInput').value); if (draft.token_budget < 500 || draft.token_budget > 24000) { $('#controlFeedback').textContent = 'El límite debe estar entre 500 y 24.000 tokens.'; return; } try { const updated = await fetchApi(`/api/agents/${agent.id}/controls`, {method:'POST', body:JSON.stringify(draft)}); Object.assign(agent, updated); State.controlDrafts.delete(agent.id); $('#controlFeedback').textContent = `${agent.provider} · ${agent.model || 'sin modelo'} guardado.`; } catch (error) { if (!State.connected) { Object.assign(agent, draft); State.controlDrafts.delete(agent.id); $('#controlFeedback').textContent = 'Ajuste solo local: conecta la API para guardarlo.'; } else { $('#controlFeedback').textContent = `No se guardó: ${error.message}`; } } renderDashboard(); }
 function bindInteractions() { $('#agentSelect').addEventListener('change', (event) => { State.selectedAgentId = event.target.value; $('#controlFeedback').textContent = ''; renderControlPanel(); }); $('#budgetInput').addEventListener('input', (event) => { const draft = getControlDraft(getSelectedAgent()); draft.token_budget = Number(event.target.value); draft.dirty = true; }); $('#providerSelect').addEventListener('change', (event) => { const draft = getControlDraft(getSelectedAgent()); draft.provider = event.target.value; draft.model = modelsFor(draft.provider)[0] || ''; draft.dirty = true; renderControlPanel(); }); $('#modelSelect').addEventListener('change', (event) => { const draft = getControlDraft(getSelectedAgent()); draft.model = event.target.value; draft.dirty = true; }); $('#effortSelector').addEventListener('click', (event) => { const level = event.target.dataset.effort; if (!level) return; const draft = getControlDraft(getSelectedAgent()); draft.reasoning_effort = level; draft.dirty = true; renderControlPanel(); }); $('#saveControls').addEventListener('click', saveAgentControls); $('#openCustomizer').addEventListener('click', openCustomizer); $('#closeCustomizer').addEventListener('click', () => $('#customizerDialog').close()); $('#cancelCustomizer').addEventListener('click', () => $('#customizerDialog').close()); $('#customizerForm').addEventListener('submit', saveCustomizer); $('#profileAgentSelect').addEventListener('change', (event) => { State.profileAgentId = event.target.value; renderCustomizer(); }); ['profileName','profileRole','profileAction','profileTone','profileHue','profileActions'].forEach((id) => $(`#${id}`).addEventListener('input', previewCustomizer)); $('#missionForm').addEventListener('submit', submitMission); $('#refreshCodexUsage').addEventListener('click', () => syncCodexUsage().catch(() => {})); $('#openAudit').addEventListener('click', () => openAuditHistory()); $('#closeAudit').addEventListener('click', () => $('#auditDialog').close()); document.querySelector('.LiveOpsLayout').addEventListener('click', (event) => { const camera = event.target.closest('[data-camera]'); if (camera) { controlRoomCamera(camera.dataset.camera); return; } const button = event.target.closest('[data-agent-info]'); if (!button) return; const id = button.dataset.agentInfo; State.openAgentId = State.openAgentId === id ? null : id; renderAgentWatchPanels(); }); }
 function bindAccess() { $('#openAccess').addEventListener('click', openAccess); $('#closeAccess').addEventListener('click', () => $('#accessDialog').close()); $('#activeUserSelect').addEventListener('change', (event) => { State.operatorId = event.target.value; localStorage.setItem('slimeops-operator', State.operatorId); renderAccess(); syncDashboard().catch(() => {}); }); $('#roleForm').addEventListener('submit', async (event) => { event.preventDefault(); const name = $('#newRoleName').value.trim(); const permissions = $('#newRolePermissions').value.split(',').map((item) => item.trim()).filter(Boolean); if (!name || !permissions.length) return; State.access = await fetchApi('/api/access/roles', {method:'POST', body:JSON.stringify({name, permissions})}); renderAccess(); }); $('#userForm').addEventListener('submit', async (event) => { event.preventDefault(); const name = $('#newUserName').value.trim(); if (!name) return; State.access = await fetchApi('/api/access/users', {method:'POST', body:JSON.stringify({name, role_id:$('#newUserRole').value})}); renderAccess(); }); }
-bindInteractions(); bindAccess(); bindAgentCreation(); renderDashboard(); renderAgentUsageChart(); renderCodexUsageChart(); requestAnimationFrame(advanceRoomRoutes); updateDigitalClock(); syncDashboard().catch(() => { updateConnectionLabel(); }); syncUsageSeries().catch(() => {}); syncModelCatalog().catch(() => {}); connectLiveStream(); syncCodexUsage().catch(() => {}); checkForDeployment().catch(() => {}); setInterval(() => syncDashboard().catch(() => {}), 2000); setInterval(() => syncUsageSeries().catch(() => {}), 15000); setInterval(() => syncCodexUsage().catch(() => {}), 60000); setInterval(() => checkForDeployment().catch(() => {}), 25000); setInterval(runLocalTelemetry, 1000); setInterval(makeSlimesWander, 4200); setInterval(updateDigitalClock, 1000);
+bindInteractions(); bindAccess(); bindAgentCreation(); renderDashboard(); renderAgentUsageChart(); renderCodexUsageChart(); requestAnimationFrame(advanceRoomRoutes); updateDigitalClock(); syncDashboard().catch(() => { updateConnectionLabel(); }); syncUsageSeries().catch(() => {}); syncModelCatalog().catch(() => {}); connectLiveStream(); syncCodexUsage().catch(() => {}); checkForDeployment().catch(() => {}); setInterval(() => syncDashboard().catch(() => {}), 2000); setInterval(() => syncUsageSeries().catch(() => {}), 15000); setInterval(() => syncCodexUsage().catch(() => {}), 60000); setInterval(() => checkForDeployment().catch(() => {}), 25000); setInterval(runLocalTelemetry, 1000); setInterval(makeSlimesWander, 4200); setInterval(saveRoomState, 500); setInterval(updateDigitalClock, 1000); window.addEventListener('pagehide', saveRoomState); document.addEventListener('visibilitychange', () => { if (document.hidden) saveRoomState(); else { syncDashboard().catch(() => {}); connectLiveStream(); } });
