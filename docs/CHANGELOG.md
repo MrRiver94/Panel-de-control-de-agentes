@@ -44,3 +44,10 @@
 ## 2026-10-22 — Sala en directo
 
 - Añadidas tarjetas laterales animadas por agente, cámara con zoom y desplazamiento limitado, rutas de descanso coordinadas y refresco de despliegue automático.
+
+## 2026-10-23 — Arranque local simplificado
+
+- Añadido `npm run start` en `frontend/` para compilar y servir el panel en `http://127.0.0.1:4173`.
+- Añadido `backend/start.ps1` para iniciar la API local con el entorno virtual del proyecto.
+- Permitido al frontend local comunicarse con la API mediante CORS.
+

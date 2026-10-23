@@ -1,0 +1,8 @@
+{
+  "name": "slimeops-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node build.mjs && node serve.mjs"
+  }
+}

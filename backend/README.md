@@ -4,12 +4,18 @@ API local de observabilidad y control del roster. El historial de actividad se g
 
 ## Ejecutar
 
+Con el entorno virtual y las dependencias instalados, arranca la API desde esta carpeta con:
+
 ```powershell
-cd backend
+.\start.ps1
+```
+
+Para preparar el entorno por primera vez:
+
+```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 El frontend se conecta por defecto a `http://127.0.0.1:8000`.

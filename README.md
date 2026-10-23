@@ -4,10 +4,21 @@ Panel visual para controlar un roster de agentes reutilizables. La sala de slime
 
 ## Arranque local
 
+Abre dos terminales en la carpeta del proyecto. En la primera, arranca el backend:
+
 ```powershell
 cd backend
-.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+.\start.ps1
 ```
+
+En la segunda, arranca el frontend:
+
+```powershell
+cd frontend
+npm run start
+```
+
+Abre [http://127.0.0.1:4173](http://127.0.0.1:4173). El frontend compila `dist/` al arrancar y se conecta a `http://127.0.0.1:8000`; deja ambas terminales abiertas mientras lo usas. La primera vez, si todavía no existe `backend/.venv`, créalo desde `backend` con `python -m venv .venv` y ejecuta `pip install -r requirements.txt`.
 
 El panel publicado se conecta a `http://127.0.0.1:8000`; por eso la API debe estar activa en el mismo equipo para ver telemetría, límites de Codex y auditoría real.
 
