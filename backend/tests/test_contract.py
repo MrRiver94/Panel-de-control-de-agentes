@@ -1,6 +1,7 @@
 """API and model-control regression tests using the standard test runner."""
 
 from importlib import import_module
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -45,6 +46,17 @@ class ModelControlsTests(unittest.TestCase):
                     ))
             finally:
                 main.agents["nexus"] = original
+
+    def test_usage_series_shows_measured_peak(self) -> None:
+        main = import_module("app.main")
+        with TemporaryDirectory() as directory, patch.object(main, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
+            with TestClient(main.app) as client:
+                first = datetime.now(timezone.utc) - timedelta(seconds=40)
+                main.sample_agent_usage(first, 100)
+                main.sample_agent_usage(first + timedelta(seconds=30), 220)
+                response = client.get("/api/usage-series?minutes=60")
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()["points"][-1]["tokens_per_minute"], 240)
 
     def test_activity_counts_reasoning_tokens(self) -> None:
         activity = ActivityIn(agent_id="nexus", kind="plan", message="planning", reasoning_tokens=25)

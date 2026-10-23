@@ -20,7 +20,7 @@ El Site es estático. Las llamadas a `127.0.0.1` solo funcionan desde el ordenad
 
 ## Interfaz
 
-La pantalla principal contiene la sala, las tarjetas laterales de cada slime, controles rápidos de proveedor/modelo/tokens/esfuerzo, salud operativa, capacidad de Codex y actividad reciente.
+La pantalla principal contiene la sala, las tarjetas laterales de cada slime, controles rápidos de proveedor/modelo/tokens/esfuerzo, salud operativa, capacidad de Codex y actividad reciente. Bajo salud operativa aparece el ritmo de tokens por minuto de los agentes durante la última hora; bajo capacidad Codex se muestran los tokens diarios de los últimos siete días. Ambas gráficas resaltan su pico y no rellenan con datos ficticios las fechas sin historial.
 
 Los popups existentes son:
 
@@ -37,14 +37,18 @@ La sala usa `RoomWorld` como cámara transformable. Las unidades se insertan en 
 | --- | --- |
 | `activity_events` | Misiones, cambios de controles/perfil y actividad declarada, con tokens de entrada, salida y razonamiento. |
 | `agent_profiles` | Personalización persistida por agente. |
+| `usage_samples` | Muestras del medidor acumulado de agentes cada 15 segundos, usadas para calcular tokens por minuto; se conservan 48 horas. |
 
 La base se inicializa al arrancar. Está ignorada por Git para mantener los registros locales privados.
+
+El ritmo de agentes deriva de diferencias entre lecturas del medidor acumulado; mientras no exista runtime real, ese medidor incluye la telemetría simulada del prototipo. La gráfica de Codex utiliza `dailyUsageBuckets` del App Server local y es independiente de los agentes.
 
 ### Endpoints
 
 | Método | Ruta | Uso |
 | --- | --- | --- |
 | GET | `/api/dashboard` | Estado del roster y últimos 50 eventos. |
+| GET | `/api/usage-series?minutes=60` | Serie persistida del ritmo reciente de los agentes (15–120 minutos). |
 | GET | `/api/stream` | Actualizaciones SSE del panel. |
 | GET | `/api/activity/history?limit=100` | Auditoría persistente; máximo 500. |
 | POST | `/api/dispatch` | Enruta una misión y registra las asignaciones. |

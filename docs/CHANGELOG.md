@@ -1,5 +1,11 @@
 # Registro de cambios
 
+## 2026-10-23 — Gráficas de uso
+
+- Añadida bajo salud operativa una gráfica de tokens por minuto de los agentes con pico resaltado e historial local persistente.
+- Añadida bajo capacidad Codex una gráfica de tokens diarios de los últimos siete días a partir de datos reales del App Server.
+- Introducidas muestras `usage_samples` cada 15 segundos y el endpoint `/api/usage-series`; las gráficas muestran un estado vacío cuando falta historial.
+
 ## 2026-10-23 — Selector de proveedor y modelo
 
 - Añadido al control de agentes el proveedor Codex/OpenAI o Anthropic/Claude y un selector de modelo leído desde la API.

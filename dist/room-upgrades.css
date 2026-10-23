@@ -10,6 +10,23 @@
 .CodexFacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
 .CodexFacts span { padding: 3px 4px; color: #b9d9d6; border: 1px solid #3f676a; font-size: 7px; }
 .CodexSource { display: block; margin-top: 7px; color: #7ee2e8; font-size: 8px; }
+.MetricsPanel, .CodexUsagePanel { display: flex; flex-direction: column; }
+.UsagePlot { margin-top: auto; padding-top: 13px; border-top: 1px solid #456861; }
+.UsagePlotTitle, .UsagePlotAxis { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.UsagePlotTitle b { color: #e8f0d6; font: 7px 'Press Start 2P', monospace; line-height: 1.5; }
+.UsagePlotTitle span { color: #ffbd80; font: 8px 'Space Mono', monospace; white-space: nowrap; }
+.UsagePlotCanvas { height: 142px; margin-top: 8px; overflow: hidden; border: 1px solid #496b66; background: linear-gradient(180deg, #0d2428, #102027); }
+.UsagePlotCanvas svg { display: block; width: 100%; height: 100%; }
+.UsageChartEmpty { display: grid; height: 100%; place-items: center; padding: 12px; color: #83aaa5; font-size: 9px; text-align: center; }
+.UsagePlotCanvas .ChartGrid { stroke: #507670; stroke-opacity: .35; stroke-dasharray: 3 5; }
+.UsagePlotCanvas .ChartLine { stroke: #7ee2e8; stroke-width: 2.5; fill: none; stroke-linejoin: round; }
+.UsagePlotCanvas .ChartPoint { fill: #d9f45a; stroke: #0e252a; stroke-width: 2; }
+.UsagePlotCanvas .ChartPeak { fill: #ffbd80; }
+.UsagePlotCanvas .ChartBar { fill: #68c9c9; }
+.UsagePlotCanvas .ChartBarPeak { fill: #ffbd80; }
+.UsagePlotCanvas text { fill: #a8c8bf; font: 8px 'Space Mono', monospace; }
+.UsagePlotAxis { margin-top: 5px; color: #8db2a8; font: 7px 'Space Mono', monospace; }
+.UsagePlotNote { display: block; min-height: 13px; margin-top: 7px; color: #9cc2b8; font-size: 8px; line-height: 1.35; }
 .ModelFields { grid-template-columns: 1fr; margin-top: 9px; }
 .ModelFields select { text-overflow: ellipsis; }
 .ModelHint, .ControlFeedback { display: block; margin-top: 7px; color: #9dc7c1; font-size: 8px; line-height: 1.5; }

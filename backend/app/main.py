@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -174,6 +174,14 @@ def create_audit_schema() -> None:
             )
         """)
         connection.execute("CREATE INDEX IF NOT EXISTS activity_events_created_at ON activity_events(created_at DESC)")
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS usage_samples (
+                sampled_at TEXT PRIMARY KEY,
+                total_tokens INTEGER NOT NULL,
+                delta_tokens INTEGER NOT NULL,
+                elapsed_seconds REAL NOT NULL
+            )
+        """)
         connection.execute("CREATE TABLE IF NOT EXISTS roles (id TEXT PRIMARY KEY, name TEXT NOT NULL, permissions TEXT NOT NULL)")
         connection.execute("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, role_id TEXT NOT NULL)")
         connection.execute("CREATE TABLE IF NOT EXISTS agent_registry (agent_id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
@@ -332,6 +340,26 @@ def apply_live_telemetry() -> None:
         agent.tokens_used = min(agent.token_budget, agent.tokens_used + tokens)
         if agent.tokens_used >= agent.token_budget:
             agent.status = "blocked"
+    sample_agent_usage(sampled_at)
+
+
+def sample_agent_usage(sampled_at: datetime | None = None, total_tokens: int | None = None) -> None:
+    """Persist a measured meter delta at most once every 15 seconds."""
+    sampled_at = sampled_at or now()
+    total_tokens = total_tokens if total_tokens is not None else sum(agent.tokens_used for agent in agents.values())
+    with audit_lock, audit_connection() as connection:
+        previous = connection.execute(
+            "SELECT sampled_at, total_tokens FROM usage_samples ORDER BY sampled_at DESC LIMIT 1"
+        ).fetchone()
+        elapsed = (sampled_at - datetime.fromisoformat(previous["sampled_at"])).total_seconds() if previous else 0
+        if previous and elapsed < 15:
+            return
+        delta = max(0, total_tokens - previous["total_tokens"]) if previous else 0
+        connection.execute(
+            "INSERT INTO usage_samples VALUES (?, ?, ?, ?)",
+            (sampled_at.isoformat(), total_tokens, delta, max(0, elapsed)),
+        )
+        connection.execute("DELETE FROM usage_samples WHERE sampled_at < ?", ((sampled_at - timedelta(days=2)).isoformat(),))
 
 
 def now() -> datetime:
@@ -428,6 +456,23 @@ def dashboard(request: Request) -> dict[str, list[dict]]:
     require_permission(request, "dashboard.view")
     apply_live_telemetry()
     return dashboard_snapshot()
+
+
+@app.get("/api/usage-series")
+def usage_series(request: Request, minutes: int = 60) -> dict[str, Any]:
+    require_permission(request, "dashboard.view")
+    minutes = max(15, min(minutes, 120))
+    cutoff = (now() - timedelta(minutes=minutes)).isoformat()
+    with audit_lock, audit_connection() as connection:
+        rows = connection.execute(
+            "SELECT sampled_at, total_tokens, delta_tokens, elapsed_seconds FROM usage_samples "
+            "WHERE sampled_at >= ? ORDER BY sampled_at ASC LIMIT 480", (cutoff,)
+        ).fetchall()
+    return {"window_minutes": minutes, "source": "agent-meter", "points": [
+        {"at": row["sampled_at"], "total_tokens": row["total_tokens"],
+         "tokens_per_minute": round(row["delta_tokens"] * 60 / row["elapsed_seconds"], 1) if row["elapsed_seconds"] > 0 else 0}
+        for row in rows
+    ]}
 
 
 @app.get("/api/models")
