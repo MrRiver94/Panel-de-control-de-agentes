@@ -29,7 +29,7 @@ Los popups existentes son:
 
 La sala usa `RoomWorld` como cámara transformable. Las unidades se insertan en ese mundo desde `renderSlimeRoom`; las ventanas popup se mantienen fuera para no verse afectadas por el zoom.
 
-La consola inferior muestra los eventos de `activity_events` recibidos por `/api/dashboard` y `/api/stream`, sin interpolar HTML de sus mensajes. El selector de perfiles rápidos reutiliza `POST /api/agents/{id}/profile`: cambia el rol y las acciones declaradas, pero no habilita por sí mismo nuevas herramientas en el runtime. La sala distingue `active`, `running`, `thinking`, `standby`, `paused`, `blocked` y `error`; los estados `thinking`, `paused` y `error` solo aparecen si el backend los comunica. No se infieren del consumo de tokens.
+La consola inferior muestra los eventos de `activity_events` recibidos por `/api/dashboard` y `/api/stream`, sin interpolar HTML de sus mensajes. La sala distingue `active`, `running`, `thinking`, `standby`, `paused`, `blocked` y `error`; los estados `thinking`, `paused` y `error` solo aparecen si el backend los comunica. No se infieren del consumo de tokens.
 
 ## Backend y datos
 

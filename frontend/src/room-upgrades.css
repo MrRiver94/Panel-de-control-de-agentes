@@ -210,12 +210,6 @@
 .RoomSimulationBar button:hover, .RoomSimulationBar button:focus-visible { background: #fff1d4; outline: 2px solid #fff1d4; outline-offset: 2px; }
 .RoomSimulationBar button.IsRunning { border-color: #79e8ee; color: #d8f6ed; background: #183239; }
 .RoomSimulationBar small { color: #b8cab8; font-size: 9px; }
-.QuickProfileBar { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; padding: 9px 12px; border: 2px solid #536f69; background: #14252a; }
-.QuickProfileBar label { color: #d9f45a; font: 8px 'Press Start 2P', monospace; }
-.QuickProfileBar select { min-width: 160px; padding: 7px; border: 1px solid #6d928a; color: #fff1d4; background: #0c1b22; font: 10px 'Space Mono', monospace; }
-.QuickProfileBar button { padding: 8px 10px; border: 1px solid #d9f45a; color: #17272a; background: #d9f45a; cursor: pointer; font: 7px 'Press Start 2P', monospace; }
-.QuickProfileBar button:hover, .QuickProfileBar button:focus-visible { background: #fff1d4; outline: 2px solid #fff1d4; outline-offset: 2px; }
-.QuickProfileBar small { flex: 1 1 240px; color: #9dc7c1; font-size: 9px; }
 .AgentStateBeacon { display: none; position: absolute; z-index: 4; }
 .SlimeUnit.StatusThinking .AgentStateBeacon { display: block; top: 8px; right: -1px; width: 19px; height: 15px; border: 3px solid #294051; background: #79e8ee; box-shadow: 0 4px #4e7892, 0 0 10px #79e8ee; animation: stateBlink .55s steps(2) infinite; }
 .SlimeUnit.StatusError .AgentStateBeacon, .SlimeUnit.StatusPaused .AgentStateBeacon, .SlimeUnit.StatusBlocked .AgentStateBeacon { display: grid; top: -17px; right: 0; width: 21px; height: 21px; place-items: center; border: 2px solid #302638; color: #fff1d4; font: bold 14px/1 'Space Mono', monospace; }

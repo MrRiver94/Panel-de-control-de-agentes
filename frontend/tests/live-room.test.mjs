@@ -11,8 +11,6 @@ function openRoom(storage = new Map()) {
   const button = {textContent:'', addEventListener() {}, classList:{add() {}, remove() {}}};
   const feed = {scrollHeight:0, scrollTop:0, clientHeight:0, children:[], replaceChildren(...children) { this.children = children; }};
   const count = {textContent:''};
-  const profileSelect = {value:''};
-  const profileFeedback = {textContent:''};
   const context = {
     structuredClone, Date, Intl, Math, Number, JSON, Object, Array, Map, Set,
     localStorage: {
@@ -21,11 +19,11 @@ function openRoom(storage = new Map()) {
     },
     document: {
       addEventListener() {}, createElement: () => ({className:'', textContent:''}),
-      querySelector: (selector) => ({'#terminalFeed':feed, '#terminalCount':count, '#quickProfileSelect':profileSelect, '#quickProfileFeedback':profileFeedback})[selector] || (['#simulateAll', '#agentSelect', '#applyQuickProfile'].includes(selector) ? button : world)
+      querySelector: (selector) => ({'#terminalFeed':feed, '#terminalCount':count})[selector] || (selector === '#simulateAll' ? button : world)
     },
     requestAnimationFrame() {}
   };
-  runInNewContext(`${setup}\nrenderDashboard = () => {}; renderSlimeRoom = () => {}; updateConnectionLabel = () => {}; globalThis.room = {State, routeToRoom, advanceRoomRoutes, saveRoomState, consumeDashboard, triggerWorkAnimation, startRoomSimulation, stopRoomSimulation, agentStateLabel, renderTerminal, QuickProfiles};`, context);
+  runInNewContext(`${setup}\nrenderDashboard = () => {}; renderSlimeRoom = () => {}; updateConnectionLabel = () => {}; globalThis.room = {State, routeToRoom, advanceRoomRoutes, saveRoomState, consumeDashboard, triggerWorkAnimation, startRoomSimulation, stopRoomSimulation, agentStateLabel, renderTerminal};`, context);
   context.room.feed = feed;
   context.room.terminalCount = count;
   return context.room;
@@ -121,10 +119,4 @@ test('terminal renders all event messages as text in chronological order', () =>
   assert.match(room.feed.children[1].textContent, /<script>unsafe<\/script>/);
   assert.equal(room.feed.children[1].className, 'TerminalLine IsError');
   assert.equal(room.terminalCount.textContent, '2 REGISTROS');
-});
-
-test('quick profiles include the role and declared actions for testing', () => {
-  const room = openRoom();
-  assert.equal(room.QuickProfiles.testing.role, 'Testing y calidad');
-  assert.deepEqual([...room.QuickProfiles.testing.enabled_actions], ['revisar', 'auditar']);
 });

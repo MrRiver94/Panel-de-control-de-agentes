@@ -1,9 +1,8 @@
 # Registro de cambios
 
-## 2026-10-23 — Consola, perfiles rápidos y estados reactivos
+## 2026-10-23 — Consola y estados reactivos
 
 - Añadida una consola desplegable que presenta con marca de tiempo los eventos recibidos de la API local.
-- Añadidos cinco perfiles rápidos que actualizan rol, acción por defecto y acciones declaradas mediante el endpoint de perfiles existente.
 - Incorporados los estados `thinking`, `paused` y `error` al contrato del backend y un endpoint auditado para informarlos; la sala y las tarjetas muestran sus señales visuales.
 - Estos estados requieren que un ejecutor o integración los informe; el panel todavía no ejecuta modelos ni herramientas desde la interfaz.
 

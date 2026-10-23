@@ -83,24 +83,6 @@ class ModelControlsTests(unittest.TestCase):
             finally:
                 main.agents["scout"] = original
 
-    def test_quick_profile_uses_existing_profile_contract(self) -> None:
-        main = import_module("app.main")
-        original = main.agents["forge"].model_copy(deep=True)
-        with TemporaryDirectory() as directory, patch.object(main, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
-            try:
-                with TestClient(main.app) as client:
-                    response = client.post("/api/agents/forge/profile", json={
-                        "name": "FORGE", "role": "Testing y calidad", "tone": "#ff6b9a",
-                        "display_hue": "135deg", "idle_mode": "Sleep", "default_action": "revisando",
-                        "enabled_actions": ["revisar", "auditar"],
-                    })
-                    self.assertEqual(response.status_code, 200)
-                    main.agents["forge"].role = "Constructor"
-                    main.load_agent_profiles()
-                    self.assertEqual(main.agents["forge"].role, "Testing y calidad")
-                    self.assertEqual(main.agents["forge"].enabled_actions, ["revisar", "auditar"])
-            finally:
-                main.agents["forge"] = original
 
 
 if __name__ == "__main__":
