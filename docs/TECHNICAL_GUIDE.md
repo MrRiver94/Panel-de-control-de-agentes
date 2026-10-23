@@ -20,7 +20,7 @@ El Site es estático. Las llamadas a `127.0.0.1` solo funcionan desde el ordenad
 
 ## Interfaz
 
-La pantalla principal contiene la sala, las tarjetas laterales de cada slime, controles rápidos de tokens/esfuerzo, salud operativa, capacidad de Codex y actividad reciente.
+La pantalla principal contiene la sala, las tarjetas laterales de cada slime, controles rápidos de proveedor/modelo/tokens/esfuerzo, salud operativa, capacidad de Codex y actividad reciente.
 
 Los popups existentes son:
 
@@ -31,7 +31,7 @@ La sala usa `RoomWorld` como cámara transformable. Las unidades se insertan en 
 
 ## Backend y datos
 
-`backend/app/main.py` es el único punto de entrada de la API. La base `data/agent_activity.sqlite3` tiene dos tablas:
+`backend/app/main.py` es el único punto de entrada de la API. La base `data/agent_activity.sqlite3` guarda entre otras estas tablas:
 
 | Tabla | Contenido |
 | --- | --- |
@@ -49,7 +49,8 @@ La base se inicializa al arrancar. Está ignorada por Git para mantener los regi
 | GET | `/api/activity/history?limit=100` | Auditoría persistente; máximo 500. |
 | POST | `/api/dispatch` | Enruta una misión y registra las asignaciones. |
 | POST | `/api/activity` | Un runtime informa de un paso real y sus tokens. |
-| POST | `/api/agents/{id}/controls` | Actualiza límite de tokens y esfuerzo. |
+| POST | `/api/agents/{id}/controls` | Actualiza proveedor, modelo, límite de tokens y esfuerzo. |
+| GET | `/api/models` | Catálogo de proveedores y modelos disponibles para el selector. |
 | POST | `/api/agents/{id}/profile` | Persiste identidad, estilo y acciones del agente. |
 | GET | `/api/codex-usage` | Lee límites reales del Codex local, con caché corta. |
 
@@ -64,6 +65,8 @@ La base incorpora estas tablas adicionales:
 | `agent_registry` | Estado completo y persistente de cada agente creado o actualizado. |
 
 Las capacidades son `dashboard.view`, `mission.create`, `agents.create`, `agents.update`, `agents.delete` y `access.manage`. La semilla contiene `super-admin` con `*` y `operador-misiones` con solo `dashboard.view` y `mission.create`.
+
+`AgentState` conserva `provider` (`codex` o `anthropic`) y `model` en `agent_registry`, también para agentes creados por API. Los registros antiguos reciben `codex` y modelo vacío; el panel lo muestra como «Sin asignar», sin inventar qué modelo ejecutan. `POST /api/agents/{id}/controls` acepta ambos parámetros además de tokens y esfuerzo. `GET /api/models` usa un catálogo sugerido o el JSON de `AGENT_MODEL_CATALOG_JSON`; es una lista de selección, no una comprobación de permisos ni de disponibilidad en las cuentas. El runtime futuro deberá consumir estos campos para elegir adaptador y modelo antes de ejecutar una misión.
 
 El frontend transporta el operador activo en `X-Operator-Id` y FastAPI comprueba el permiso en cada mutaciÃ³n. Es una capa local provisional para controlar el panel, no autenticaciÃ³n de red: no debe exponerse fuera de `127.0.0.1` sin identidad real, sesiones firmadas y protecciÃ³n CSRF.
 

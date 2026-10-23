@@ -11,6 +11,18 @@ cd backend
 
 El panel publicado se conecta a `http://127.0.0.1:8000`; por eso la API debe estar activa en el mismo equipo para ver telemetría, límites de Codex y auditoría real.
 
+## Proveedor y modelo por agente
+
+En **Control del agente** puedes elegir `Codex / OpenAI` o `Anthropic / Claude`, seleccionar un modelo y guardar la elección junto al límite de tokens y el esfuerzo. El backend conserva estos parámetros en SQLite y los devuelve en `/api/dashboard`. Los modelos sugeridos no implican acceso a la cuenta; la ejecución real de modelos aún no está conectada.
+
+Para sustituir el catálogo sugerido por los modelos de tu entorno, define `AGENT_MODEL_CATALOG_JSON` antes de arrancar la API. Ejemplo en PowerShell:
+
+```powershell
+$env:AGENT_MODEL_CATALOG_JSON = '{"codex":["modelo-codex-configurado"],"anthropic":["modelo-claude-configurado"]}'
+```
+
+El selector lee ese catálogo desde `GET /api/models`. Un modelo ya asignado a un agente también aparece aunque no figure en el catálogo actual.
+
 ## Estructura
 
 | Ruta | Responsabilidad |

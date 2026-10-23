@@ -1,5 +1,12 @@
 # Registro de cambios
 
+## 2026-10-23 — Selector de proveedor y modelo
+
+- Añadido al control de agentes el proveedor Codex/OpenAI o Anthropic/Claude y un selector de modelo leído desde la API.
+- Persistidos proveedor y modelo por agente en SQLite, con compatibilidad para registros anteriores sin modelo asignado.
+- Añadido `GET /api/models` y `AGENT_MODEL_CATALOG_JSON` para configurar el catálogo sin modificar el frontend.
+- Aclarado en la interfaz que la elección prepara el runtime futuro, pero aún no ejecuta inferencias reales.
+
 ## 2026-10-23 — Animaciones integradas de descanso
 
 - Eliminados los objetos de café superpuestos en la sala y las tarjetas: las interacciones usan únicamente el sprite completo del slime.

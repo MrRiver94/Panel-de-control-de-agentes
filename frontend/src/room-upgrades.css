@@ -10,6 +10,10 @@
 .CodexFacts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
 .CodexFacts span { padding: 3px 4px; color: #b9d9d6; border: 1px solid #3f676a; font-size: 7px; }
 .CodexSource { display: block; margin-top: 7px; color: #7ee2e8; font-size: 8px; }
+.ModelFields { grid-template-columns: 1fr; margin-top: 9px; }
+.ModelFields select { text-overflow: ellipsis; }
+.ModelHint, .ControlFeedback { display: block; margin-top: 7px; color: #9dc7c1; font-size: 8px; line-height: 1.5; }
+.ControlFeedback { min-height: 12px; color: #d9f45a; }
 
 .SlimeRoom {
   min-height: clamp(590px, 69vh, 790px);

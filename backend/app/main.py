@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -18,8 +21,13 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 ReasoningEffort = Literal["low", "medium", "high", "xhigh"]
+ModelProvider = Literal["codex", "anthropic"]
 AgentStatus = Literal["active", "running", "standby", "blocked"]
 IdleMode = Literal["Coffee", "Eating", "Sleep"]
+DEFAULT_MODEL_CATALOG = {
+    "codex": ["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"],
+    "anthropic": ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"],
+}
 
 
 class AgentState(BaseModel):
@@ -31,6 +39,8 @@ class AgentState(BaseModel):
     tokens_used: int = 0
     token_budget: int = Field(ge=500, le=24000)
     reasoning_effort: ReasoningEffort = "medium"
+    provider: ModelProvider = "codex"
+    model: str = Field(default="", max_length=120, pattern=r"^[A-Za-z0-9._:/-]*$")
     current_task: str = "En espera"
     display_hue: str = "0deg"
     idle_mode: IdleMode = "Coffee"
@@ -41,6 +51,8 @@ class AgentState(BaseModel):
 class ControlUpdate(BaseModel):
     token_budget: int = Field(ge=500, le=24000)
     reasoning_effort: ReasoningEffort
+    provider: ModelProvider | None = None
+    model: str | None = Field(default=None, max_length=120, pattern=r"^[A-Za-z0-9._:/-]*$")
 
 
 class ProfileUpdate(BaseModel):
@@ -56,6 +68,8 @@ class ProfileUpdate(BaseModel):
 class AgentCreate(ProfileUpdate):
     token_budget: int = Field(default=5000, ge=500, le=24000)
     reasoning_effort: ReasoningEffort = "medium"
+    provider: ModelProvider = "codex"
+    model: str = Field(default="", max_length=120, pattern=r"^[A-Za-z0-9._:/-]*$")
 
 
 class RoleUpdate(BaseModel):
@@ -131,11 +145,16 @@ codex_usage_cached_at: datetime | None = None
 codex_usage_lock = threading.Lock()
 
 
-def audit_connection() -> sqlite3.Connection:
+@contextmanager
+def audit_connection() -> Generator[sqlite3.Connection, None, None]:
     AUDIT_DATABASE.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(AUDIT_DATABASE)
     connection.row_factory = sqlite3.Row
-    return connection
+    try:
+        with connection:
+            yield connection
+    finally:
+        connection.close()
 
 
 def create_audit_schema() -> None:
@@ -228,6 +247,30 @@ def save_agent_profile(agent: AgentState) -> None:
              agent.default_action, json.dumps(agent.enabled_actions), now().isoformat()),
         )
     save_agent_registry(agent)
+
+
+def configured_model_catalog() -> dict[str, list[str]]:
+    """Suggested models; deployments can replace them with AGENT_MODEL_CATALOG_JSON."""
+    raw = os.getenv("AGENT_MODEL_CATALOG_JSON")
+    if not raw:
+        catalog = {provider: models.copy() for provider, models in DEFAULT_MODEL_CATALOG.items()}
+    else:
+        configured = json.loads(raw)
+        if not isinstance(configured, dict):
+            raise ValueError("AGENT_MODEL_CATALOG_JSON must be an object")
+        catalog = {}
+        for provider in DEFAULT_MODEL_CATALOG:
+            models = configured.get(provider, [])
+            if not isinstance(models, list) or any(
+                not isinstance(model, str) or not re.fullmatch(r"[A-Za-z0-9._:/-]{1,120}", model)
+                for model in models
+            ):
+                raise ValueError(f"Invalid model list for {provider}")
+            catalog[provider] = list(dict.fromkeys(models))
+    for agent in agents.values():
+        if agent.model and agent.model not in catalog[agent.provider]:
+            catalog[agent.provider].append(agent.model)
+    return catalog
 
 
 def access_tree() -> dict[str, list[dict[str, Any]]]:
@@ -387,6 +430,16 @@ def dashboard(request: Request) -> dict[str, list[dict]]:
     return dashboard_snapshot()
 
 
+@app.get("/api/models")
+def available_models(request: Request) -> dict[str, Any]:
+    require_permission(request, "dashboard.view")
+    catalog = configured_model_catalog()
+    return {"providers": [
+        {"id": "codex", "label": "Codex / OpenAI", "models": catalog["codex"]},
+        {"id": "anthropic", "label": "Anthropic / Claude", "models": catalog["anthropic"]},
+    ], "source": "configured" if os.getenv("AGENT_MODEL_CATALOG_JSON") else "suggested"}
+
+
 def dashboard_snapshot() -> dict[str, list[dict]]:
     return {"agents": [agent.model_dump() for agent in agents.values()], "events": [event.model_dump(mode="json") for event in read_activity_events(50)]}
 
@@ -511,9 +564,15 @@ def update_controls(agent_id: str, update: ControlUpdate, request: Request) -> A
     agent = get_agent(agent_id)
     agent.token_budget = update.token_budget
     agent.reasoning_effort = update.reasoning_effort
+    if update.provider is not None:
+        if update.provider != agent.provider and update.model is None:
+            agent.model = ""
+        agent.provider = update.provider
+    if update.model is not None:
+        agent.model = update.model
     save_activity_event(
         agent.id, agent.name, "control_updated",
-        f"Límite ajustado a {agent.token_budget} tokens y esfuerzo {agent.reasoning_effort}.",
+        f"Configuración: {agent.provider} / {agent.model or 'sin modelo'}, {agent.token_budget} tokens, esfuerzo {agent.reasoning_effort}.",
     )
     save_agent_registry(agent)
     return agent
@@ -546,7 +605,7 @@ def create_agent(update: AgentCreate, request: Request) -> AgentState:
     while agent_id in agents:
         agent_id = f"{base_id}-{suffix}"
         suffix += 1
-    agent = AgentState(id=agent_id, name=update.name.strip().upper(), role=update.role.strip(), tone=update.tone, token_budget=update.token_budget, reasoning_effort=update.reasoning_effort, display_hue=update.display_hue, idle_mode=update.idle_mode, default_action=update.default_action.strip(), enabled_actions=update.enabled_actions)
+    agent = AgentState(id=agent_id, name=update.name.strip().upper(), role=update.role.strip(), tone=update.tone, token_budget=update.token_budget, reasoning_effort=update.reasoning_effort, provider=update.provider, model=update.model, display_hue=update.display_hue, idle_mode=update.idle_mode, default_action=update.default_action.strip(), enabled_actions=update.enabled_actions)
     agents[agent.id] = agent
     save_agent_profile(agent)
     save_activity_event(agent.id, agent.name, "agent_created", "Agente creado desde el laboratorio de configuración.")
