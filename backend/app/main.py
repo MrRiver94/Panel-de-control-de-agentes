@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 
 ReasoningEffort = Literal["low", "medium", "high", "xhigh"]
 ModelProvider = Literal["codex", "anthropic"]
-AgentStatus = Literal["active", "running", "standby", "blocked"]
+AgentStatus = Literal["active", "running", "thinking", "standby", "paused", "blocked", "error"]
 IdleMode = Literal["Coffee", "Eating", "Sleep"]
 DEFAULT_MODEL_CATALOG = {
     "codex": ["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"],
@@ -53,6 +53,12 @@ class ControlUpdate(BaseModel):
     reasoning_effort: ReasoningEffort
     provider: ModelProvider | None = None
     model: str | None = Field(default=None, max_length=120, pattern=r"^[A-Za-z0-9._:/-]*$")
+
+
+class AgentStatusUpdate(BaseModel):
+    status: AgentStatus
+    current_task: str | None = Field(default=None, max_length=120)
+    detail: str = Field(default="", max_length=280)
 
 
 class ProfileUpdate(BaseModel):
@@ -620,6 +626,20 @@ def update_controls(agent_id: str, update: ControlUpdate, request: Request) -> A
         f"Configuración: {agent.provider} / {agent.model or 'sin modelo'}, {agent.token_budget} tokens, esfuerzo {agent.reasoning_effort}.",
     )
     save_agent_registry(agent)
+    return agent
+
+
+@app.post("/api/agents/{agent_id}/status", response_model=AgentState)
+def update_agent_status(agent_id: str, update: AgentStatusUpdate, request: Request) -> AgentState:
+    """Accept an explicit runtime state; never infer thinking or errors from token usage."""
+    require_permission(request, "agents.update")
+    agent = get_agent(agent_id)
+    agent.status = update.status
+    if update.current_task is not None:
+        agent.current_task = update.current_task.strip() or "En espera"
+    save_agent_registry(agent)
+    message = update.detail.strip() or f"Estado actualizado: {update.status}."
+    save_activity_event(agent.id, agent.name, f"status_{update.status}", message)
     return agent
 
 

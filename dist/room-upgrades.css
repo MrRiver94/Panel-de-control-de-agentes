@@ -210,6 +210,39 @@
 .RoomSimulationBar button:hover, .RoomSimulationBar button:focus-visible { background: #fff1d4; outline: 2px solid #fff1d4; outline-offset: 2px; }
 .RoomSimulationBar button.IsRunning { border-color: #79e8ee; color: #d8f6ed; background: #183239; }
 .RoomSimulationBar small { color: #b8cab8; font-size: 9px; }
+.QuickProfileBar { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; padding: 9px 12px; border: 2px solid #536f69; background: #14252a; }
+.QuickProfileBar label { color: #d9f45a; font: 8px 'Press Start 2P', monospace; }
+.QuickProfileBar select { min-width: 160px; padding: 7px; border: 1px solid #6d928a; color: #fff1d4; background: #0c1b22; font: 10px 'Space Mono', monospace; }
+.QuickProfileBar button { padding: 8px 10px; border: 1px solid #d9f45a; color: #17272a; background: #d9f45a; cursor: pointer; font: 7px 'Press Start 2P', monospace; }
+.QuickProfileBar button:hover, .QuickProfileBar button:focus-visible { background: #fff1d4; outline: 2px solid #fff1d4; outline-offset: 2px; }
+.QuickProfileBar small { flex: 1 1 240px; color: #9dc7c1; font-size: 9px; }
+.AgentStateBeacon { display: none; position: absolute; z-index: 4; }
+.SlimeUnit.StatusThinking .AgentStateBeacon { display: block; top: 8px; right: -1px; width: 19px; height: 15px; border: 3px solid #294051; background: #79e8ee; box-shadow: 0 4px #4e7892, 0 0 10px #79e8ee; animation: stateBlink .55s steps(2) infinite; }
+.SlimeUnit.StatusError .AgentStateBeacon, .SlimeUnit.StatusPaused .AgentStateBeacon, .SlimeUnit.StatusBlocked .AgentStateBeacon { display: grid; top: -17px; right: 0; width: 21px; height: 21px; place-items: center; border: 2px solid #302638; color: #fff1d4; font: bold 14px/1 'Space Mono', monospace; }
+.SlimeUnit.StatusError .AgentStateBeacon { background: #d84d5f; box-shadow: 0 0 10px #d84d5f; animation: stateBlink .65s steps(2) infinite; }
+.SlimeUnit.StatusError .AgentStateBeacon::after { content: '!'; }
+.SlimeUnit.StatusPaused .AgentStateBeacon { background: #ad8650; }
+.SlimeUnit.StatusPaused .AgentStateBeacon::after { content: 'Ⅱ'; }
+.SlimeUnit.StatusBlocked .AgentStateBeacon { color: #10252c; background: #79e8ee; }
+.SlimeUnit.StatusBlocked .AgentStateBeacon::after { content: '↻'; }
+.AgentWatchCard.StatusThinking .MiniDesk::before { animation: stateBlink .55s steps(2) infinite; }
+.AgentWatchCard.StatusError .MiniDesk::before, .AgentWatchCard.StatusError .AgentSignal { background: #d84d5f; box-shadow: 0 0 11px #d84d5f; }
+.AgentWatchCard.StatusPaused .AgentSignal { background: #ad8650; animation: none; }
+.AgentWatchCard.StatusBlocked .AgentSignal { background: #79e8ee; }
+@keyframes stateBlink { 50% { opacity: .28; } }
+.TerminalDrawer { margin-top: 12px; border: 2px solid #4d7771; background: #081319; }
+.TerminalDrawer summary { display: flex; align-items: center; gap: 10px; padding: 11px 13px; cursor: pointer; list-style: none; color: #d9f45a; font: 8px 'Press Start 2P', monospace; }
+.TerminalDrawer summary::-webkit-details-marker { display: none; }
+.TerminalDrawer summary:focus-visible { outline: 2px solid #79e8ee; outline-offset: -4px; }
+.TerminalDrawer summary small { margin-left: auto; color: #79e8ee; font: 9px 'Space Mono', monospace; }
+.TerminalChevron { font: 18px 'Space Mono', monospace; transition: transform .2s; }
+.TerminalDrawer[open] .TerminalChevron { transform: rotate(180deg); }
+.TerminalBody { padding: 0 13px 13px; border-top: 1px solid #31534f; }
+.TerminalBody p { color: #96bbb0; font-size: 9px; }
+.TerminalFeed { max-height: 220px; overflow-y: auto; padding: 7px 9px; background: #040c11; font: 10px/1.6 'Space Mono', monospace; }
+.TerminalLine { padding: 3px 0; border-bottom: 1px solid #24423a; color: #b6e7c2; overflow-wrap: anywhere; }
+.TerminalLine.IsError { color: #ff8997; }
+@media (prefers-reduced-motion: reduce) { .AgentStateBeacon, .AgentWatchCard.StatusThinking .MiniDesk::before { animation: none !important; } }
 .AppShell { max-width: none; width: 100%; padding: 16px clamp(16px, 1.7vw, 34px) 26px; }
 .SlimeRoom { background: #162239; }
 .RoomWorld { --room-zoom: 1; --room-pan-x: 0%; --room-pan-y: 0%; position: absolute; inset: 0; overflow: visible; background: #162239 url('assets/slime-hq-isometric-v5.png') center / 100% 100% no-repeat; transform: translate(var(--room-pan-x), var(--room-pan-y)) scale(var(--room-zoom)); transform-origin: center center; transition: transform .36s cubic-bezier(.2,.8,.25,1); }

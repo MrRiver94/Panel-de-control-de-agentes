@@ -62,6 +62,46 @@ class ModelControlsTests(unittest.TestCase):
         activity = ActivityIn(agent_id="nexus", kind="plan", message="planning", reasoning_tokens=25)
         self.assertEqual(activity.reasoning_tokens, 25)
 
+    def test_runtime_state_is_persisted_and_audited(self) -> None:
+        main = import_module("app.main")
+        original = main.agents["scout"].model_copy(deep=True)
+        with TemporaryDirectory() as directory, patch.object(main, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
+            try:
+                with TestClient(main.app) as client:
+                    response = client.post("/api/agents/scout/status", json={
+                        "status": "thinking", "current_task": "Investigando", "detail": "Analizando fuentes",
+                    })
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.json()["status"], "thinking")
+                    events = client.get("/api/activity/history").json()
+                    self.assertEqual(events[0]["kind"], "status_thinking")
+                    main.agents["scout"].status = "standby"
+                    main.load_agent_registry()
+                    self.assertEqual(main.agents["scout"].status, "thinking")
+                    invalid = client.post("/api/agents/scout/status", json={"status": "imaginary"})
+                    self.assertEqual(invalid.status_code, 422)
+            finally:
+                main.agents["scout"] = original
+
+    def test_quick_profile_uses_existing_profile_contract(self) -> None:
+        main = import_module("app.main")
+        original = main.agents["forge"].model_copy(deep=True)
+        with TemporaryDirectory() as directory, patch.object(main, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
+            try:
+                with TestClient(main.app) as client:
+                    response = client.post("/api/agents/forge/profile", json={
+                        "name": "FORGE", "role": "Testing y calidad", "tone": "#ff6b9a",
+                        "display_hue": "135deg", "idle_mode": "Sleep", "default_action": "revisando",
+                        "enabled_actions": ["revisar", "auditar"],
+                    })
+                    self.assertEqual(response.status_code, 200)
+                    main.agents["forge"].role = "Constructor"
+                    main.load_agent_profiles()
+                    self.assertEqual(main.agents["forge"].role, "Testing y calidad")
+                    self.assertEqual(main.agents["forge"].enabled_actions, ["revisar", "auditar"])
+            finally:
+                main.agents["forge"] = original
+
 
 if __name__ == "__main__":
     unittest.main()

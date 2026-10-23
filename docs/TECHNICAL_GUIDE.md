@@ -29,6 +29,8 @@ Los popups existentes son:
 
 La sala usa `RoomWorld` como cámara transformable. Las unidades se insertan en ese mundo desde `renderSlimeRoom`; las ventanas popup se mantienen fuera para no verse afectadas por el zoom.
 
+La consola inferior muestra los eventos de `activity_events` recibidos por `/api/dashboard` y `/api/stream`, sin interpolar HTML de sus mensajes. El selector de perfiles rápidos reutiliza `POST /api/agents/{id}/profile`: cambia el rol y las acciones declaradas, pero no habilita por sí mismo nuevas herramientas en el runtime. La sala distingue `active`, `running`, `thinking`, `standby`, `paused`, `blocked` y `error`; los estados `thinking`, `paused` y `error` solo aparecen si el backend los comunica. No se infieren del consumo de tokens.
+
 ## Backend y datos
 
 `backend/app/main.py` es el único punto de entrada de la API. La base `data/agent_activity.sqlite3` guarda entre otras estas tablas:
@@ -56,6 +58,7 @@ El ritmo de agentes deriva de diferencias entre lecturas del medidor acumulado; 
 | POST | `/api/agents/{id}/controls` | Actualiza proveedor, modelo, límite de tokens y esfuerzo. |
 | GET | `/api/models` | Catálogo de proveedores y modelos disponibles para el selector. |
 | POST | `/api/agents/{id}/profile` | Persiste identidad, estilo y acciones del agente. |
+| POST | `/api/agents/{id}/status` | Recibe un estado operativo explícito y registra el cambio en la auditoría. |
 | GET | `/api/codex-usage` | Lee límites reales del Codex local, con caché corta. |
 
 ### Control de acceso y CRUD

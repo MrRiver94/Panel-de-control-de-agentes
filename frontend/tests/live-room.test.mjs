@@ -9,16 +9,25 @@ const setup = source.slice(0, source.lastIndexOf('bindInteractions(); bindAccess
 function openRoom(storage = new Map()) {
   const world = {querySelector: () => null};
   const button = {textContent:'', addEventListener() {}, classList:{add() {}, remove() {}}};
+  const feed = {scrollHeight:0, scrollTop:0, clientHeight:0, children:[], replaceChildren(...children) { this.children = children; }};
+  const count = {textContent:''};
+  const profileSelect = {value:''};
+  const profileFeedback = {textContent:''};
   const context = {
     structuredClone, Date, Intl, Math, Number, JSON, Object, Array, Map, Set,
     localStorage: {
       getItem: (key) => storage.get(key) ?? null,
       setItem: (key, value) => storage.set(key, value)
     },
-    document: {addEventListener() {}, querySelector: (selector) => selector === '#simulateAll' ? button : world},
+    document: {
+      addEventListener() {}, createElement: () => ({className:'', textContent:''}),
+      querySelector: (selector) => ({'#terminalFeed':feed, '#terminalCount':count, '#quickProfileSelect':profileSelect, '#quickProfileFeedback':profileFeedback})[selector] || (['#simulateAll', '#agentSelect', '#applyQuickProfile'].includes(selector) ? button : world)
+    },
     requestAnimationFrame() {}
   };
-  runInNewContext(`${setup}\nrenderDashboard = () => {}; renderSlimeRoom = () => {}; updateConnectionLabel = () => {}; globalThis.room = {State, routeToRoom, advanceRoomRoutes, saveRoomState, consumeDashboard, triggerWorkAnimation, startRoomSimulation, stopRoomSimulation};`, context);
+  runInNewContext(`${setup}\nrenderDashboard = () => {}; renderSlimeRoom = () => {}; updateConnectionLabel = () => {}; globalThis.room = {State, routeToRoom, advanceRoomRoutes, saveRoomState, consumeDashboard, triggerWorkAnimation, startRoomSimulation, stopRoomSimulation, agentStateLabel, renderTerminal, QuickProfiles};`, context);
+  context.room.feed = feed;
+  context.room.terminalCount = count;
   return context.room;
 }
 
@@ -82,4 +91,40 @@ test('visual simulation survives API updates and restores the live room without 
   assert.equal(room.State.roomSimulation, null);
   assert.equal(agent.simulatedWorking, undefined);
   assert.deepEqual([...agent.position], original);
+});
+
+test('backend thinking, error and paused states drive distinct visual states', () => {
+  const room = openRoom();
+  const snapshot = (status) => ({agents:[{id:'scout', status, current_task:'Investigando'}], events:[]});
+  room.consumeDashboard(snapshot('thinking'));
+  const agent = room.State.agents[0];
+  assert.equal(agent.status, 'working');
+  assert.equal(room.agentStateLabel(agent), 'PENSANDO');
+  room.consumeDashboard(snapshot('error'));
+  assert.equal(room.agentStateLabel(agent), 'ERROR');
+  room.consumeDashboard(snapshot('paused'));
+  assert.equal(agent.status, 'sleeping');
+  agent.segmentStart -= 60_000;
+  room.advanceRoomRoutes();
+  assert.equal(room.agentStateLabel(agent), 'EN PAUSA');
+});
+
+test('terminal renders all event messages as text in chronological order', () => {
+  const room = openRoom();
+  room.State.events = [
+    {id:'new', agent:'SCOUT', kind:'status_error', message:'<script>unsafe</script>', created_at:'2026-10-23T11:00:00Z'},
+    {id:'old', agent:'NEXUS', kind:'mission_dispatched', message:'Delegado', created_at:'2026-10-23T10:59:00Z'}
+  ];
+  room.renderTerminal();
+  assert.equal(room.feed.children.length, 2);
+  assert.match(room.feed.children[0].textContent, /NEXUS/);
+  assert.match(room.feed.children[1].textContent, /<script>unsafe<\/script>/);
+  assert.equal(room.feed.children[1].className, 'TerminalLine IsError');
+  assert.equal(room.terminalCount.textContent, '2 REGISTROS');
+});
+
+test('quick profiles include the role and declared actions for testing', () => {
+  const room = openRoom();
+  assert.equal(room.QuickProfiles.testing.role, 'Testing y calidad');
+  assert.deepEqual([...room.QuickProfiles.testing.enabled_actions], ['revisar', 'auditar']);
 });
