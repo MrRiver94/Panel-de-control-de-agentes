@@ -221,7 +221,9 @@
 .RoomCameraControls button:hover, .RoomCameraControls button:focus-visible { color: #1b2d30; background: #d9f45a; outline: none; }
 
 /* Persistent audit trail: detailed enough to inspect decisions and token accounting. */
-.ActivityPanel .PanelTitle { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ActivityPanel { display: flex; flex-direction: column; min-height: 360px; }
+.ActivityPanel .PanelTitle { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 8px; }
+.ActivityPanel .ActivityList { flex: 1 1 auto; height: 0; min-height: 0; max-height: none; overflow-y: auto; }
 .AuditOpenButton { padding: 5px 6px; border: 1px solid #70a5a4; color: #d8f6ed; background: #183239; cursor: pointer; font: 7px 'Press Start 2P', monospace; }
 .AuditOpenButton:hover, .AuditOpenButton:focus-visible { color: #17272a; background: #7ee2e8; outline: none; }
 .AuditDialog { width: min(860px, calc(100vw - 28px)); max-height: min(760px, calc(100vh - 28px)); padding: 0; overflow: hidden; border: 4px solid #789b8e; color: #fff1d4; background: #101b25; box-shadow: 8px 8px 0 #070d12; }
@@ -302,6 +304,7 @@
   .MiniDesk { right: 13px; transform: skewX(-18deg); }
 }
 @media (max-width: 520px) {
+  .ActivityPanel { min-height: 320px; }
   .LiveOpsLayout { display: block; }
   .AgentWatchRail { display: grid; grid-template-columns: 1fr 1fr; margin-top: 12px; }
   .AgentWatchRailRight { margin-top: 12px; }
