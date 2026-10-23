@@ -346,3 +346,40 @@
 @keyframes miniGamePlay { 50% { transform: rotate(-4deg) translateY(-2px); } }
 @keyframes miniPhoneRing { 50% { transform: rotate(7deg); } }
 @keyframes miniTalk { 50% { transform: translateY(-3px); } }
+
+/* Each break pose contains the slime and the object in the same sprite cell. */
+.SlimeUnit.Resting:not(.Sleep):not(.Moving)[data-break='coffee'] .IdleProp,
+.SlimeUnit.Resting:not(.Sleep):not(.Moving)[data-break='phone'] .IdleProp,
+.SlimeUnit.Resting:not(.Sleep):not(.Moving)[data-break='gameboy'] .IdleProp,
+.AgentWatchCard.Resting:not(.Sleep)[data-break='coffee'] .MiniCoffee,
+.AgentWatchCard.Resting:not(.Sleep)[data-break='phone'] .MiniCoffee,
+.AgentWatchCard.Resting:not(.Sleep)[data-break='gameboy'] .MiniCoffee { display: none; }
+
+.SlimeUnit.Resting:not(.Sleep):not(.Moving)[data-break='coffee'] .SlimeSprite,
+.AgentWatchCard.Resting:not(.Sleep)[data-break='coffee'] .AgentFeedSlime {
+  background-image: url('assets/slime-coffee-action-v1.png');
+  background-size: 400% 100%;
+  animation: integratedBreakFrames 2.8s steps(1, end) infinite;
+}
+.SlimeUnit.Resting:not(.Sleep):not(.Moving)[data-break='phone'] .SlimeSprite,
+.AgentWatchCard.Resting:not(.Sleep)[data-break='phone'] .AgentFeedSlime {
+  background-image: url('assets/slime-phone-action-v1.png');
+  background-size: 400% 100%;
+  animation: integratedBreakFrames 2.2s steps(1, end) infinite;
+}
+.SlimeUnit.Resting:not(.Sleep):not(.Moving)[data-break='gameboy'] .SlimeSprite,
+.AgentWatchCard.Resting:not(.Sleep)[data-break='gameboy'] .AgentFeedSlime {
+  background-image: url('assets/slime-gameboy-action-v1.png');
+  background-size: 400% 100%;
+  animation: integratedBreakFrames 1.8s steps(1, end) infinite;
+}
+@keyframes integratedBreakFrames {
+  0%, 24.99% { background-position: 0 0; }
+  25%, 49.99% { background-position: 33.333% 0; }
+  50%, 74.99% { background-position: 66.666% 0; }
+  75%, 100% { background-position: 100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .SlimeUnit.Resting .SlimeSprite,
+  .AgentWatchCard.Resting .AgentFeedSlime { animation: none !important; background-position: 0 0; }
+}

@@ -1,5 +1,10 @@
 # Registro de cambios
 
+## 2026-10-23 — Animaciones integradas de descanso
+
+- Añadidas secuencias de cuatro poses para beber café, consultar el móvil y jugar con una consola portátil. Cada fotograma incluye al slime sujetando el objeto.
+- La sala y las tarjetas laterales reproducen esas secuencias sin superponer accesorios independientes; se respeta la preferencia de movimiento reducido.
+
 ## 2026-10-22 — Roles, usuarios y agentes persistentes
 
 - AÃ±adidos roles, usuarios y registro de agentes a SQLite.
