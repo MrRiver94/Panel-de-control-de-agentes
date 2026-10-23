@@ -1,6 +1,7 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { createServer } from "node:http";
+import { spawn } from "node:child_process";
 import { extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,6 +9,10 @@ const frontendDirectory = fileURLToPath(new URL(".", import.meta.url));
 const distDirectory = resolve(frontendDirectory, "../dist");
 const host = "127.0.0.1";
 const port = Number(process.env.PORT || 4173);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error("PORT debe ser un entero entre 1 y 65535");
+}
+const url = `http://${host}:${port}`;
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -55,6 +60,13 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(port, host, () => {
-  console.log(`Frontend disponible en http://${host}:${port}`);
+  console.log(`Frontend disponible en ${url}`);
   console.log("Pulsa Ctrl+C para detenerlo.");
+  const opener = process.platform === "win32"
+    ? spawn("cmd.exe", ["/c", "start", "", url], { detached: true, stdio: "ignore" })
+    : process.platform === "darwin"
+      ? spawn("open", [url], { detached: true, stdio: "ignore" })
+      : spawn("xdg-open", [url], { detached: true, stdio: "ignore" });
+  opener.on("error", (error) => console.error(`No se pudo abrir el navegador: ${error.message}`));
+  opener.unref();
 });

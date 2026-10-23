@@ -8,12 +8,6 @@ const DemoAgents = [
   {id:'sentinel',name:'SENTINEL',role:'Calidad',tone:'#ab8cff',hue:'230deg',tokens_used:610,token_budget:4500,reasoning_effort:'low',status:'sleeping',idle_mode:'Coffee',sleep:[39,34],work:[79,63],action:'revisando'},
   {id:'muse',name:'MUSE',role:'Dirección de arte',tone:'#ffaf5f',hue:'-45deg',tokens_used:430,token_budget:6200,reasoning_effort:'high',status:'sleeping',idle_mode:'Eating',sleep:[55,34],work:[49,33],action:'diseñando'}
 ];
-const LoungeRoutes = {
-  director: [[36,44], [38,53], [44,57], [32,49]],
-  nexus: [[54,48], [61,53], [56,57], [63,44]],
-  sentinel: [[39,34], [45,37], [43,29], [33,38]],
-  muse: [[55,34], [61,38], [64,31], [52,29]]
-};
 const BreakActivities = { director: 'phone', nexus: 'coffee', scout: 'gameboy', forge: 'talk', sentinel: 'coffee', muse: 'talk' };
 const WorkStatuses = new Set(['active', 'running', 'thinking', 'error']);
 const FallbackModelCatalog = { providers: [
@@ -25,20 +19,27 @@ const RoomStations = {
   director: {rest:[41,51], desk:[78,36], door:[[64,40],[67,36]]},
   nexus: {rest:[49,51], desk:[48,23], door:[[49,38],[49,31]]},
   scout: {rest:[43,62], desk:[21,37], door:[[37,43],[33,36]]},
-  forge: {rest:[55,62], desk:[20,70], door:[[41,54],[34,61],[31,65]]},
-  sentinel: {rest:[57,51], desk:[79,70], door:[[59,54],[65,61],[68,65]]},
+  forge: {rest:[55,62], desk:[20,70], door:[[49,62],[41,63],[36,63],[33,66],[31,65]]},
+  sentinel: {rest:[57,51], desk:[79,70], door:[[67,49],[69,56],[68,65]]},
   muse: {rest:[49,61], desk:[79,37], door:[[61,43],[66,36]]}
 };
-const SharedRestStops = [[42,52],[47,48],[52,48],[57,52],[53,58],[47,59]];
+// Puntos navegables de la zona común y posiciones de interacción junto a cada mueble.
+// El paso por el corredor superior mantiene a los slimes en el suelo abierto.
+const LoungeVisits = [
+  {point:[42,58], approach:[[50,50],[42,50]], activity:'wardrobe'},
+  {point:[50,75], approach:[[50,50],[50,63]], activity:'chair'},
+  {point:[50,64], approach:[[50,50]], activity:'coffee'},
+  {point:[50,71], approach:[[50,50],[50,63]], activity:'bed'},
+  {point:[49,65], approach:[[50,50],[50,63]], activity:'meal'},
+  {point:[50,56], approach:[[50,50]], activity:'stroll'},
+  {point:[50,67], approach:[[50,50],[50,63]], activity:'stroll'},
+  {point:[47,60], approach:[[50,50]], activity:'stroll'}
+];
 DemoAgents.forEach((agent) => { agent.sleep = [...RoomStations[agent.id].rest]; agent.work = [...RoomStations[agent.id].desk]; agent.position = [...agent.sleep]; agent.roomZone = 'rest'; agent.provider = 'codex'; agent.model = ''; });
-Object.assign(LoungeRoutes, {
-  director:[[41,51],[43,47],[46,51]], nexus:[[49,51],[50,46],[53,51]],
-  scout:[[43,62],[41,57],[44,54]], forge:[[55,62],[58,57],[55,54]],
-  sentinel:[[57,51],[55,47],[53,51]], muse:[[49,61],[47,56],[51,55]]
-});
 const State = { agents: structuredClone(DemoAgents), events: [], auditEvents: [], access: null, operatorId: localStorage.getItem('slimeops-operator') || 'super-admin', selectedAgentId: 'nexus', profileAgentId: 'nexus', connected: false, lastTelemetryAt: null, codexUsage: null, agentUsageSeries: null, modelCatalog: FallbackModelCatalog, controlDrafts: new Map(), dashboardReady: false, knownDispatches: new Set(), eventSource: null, buildId: null, openAgentId: null, roomZoom: 1, roomPan: 0, roomPanY: 0, roomSimulation: null, latestDashboard: null, terminalEventKey: null };
-const RoomStateKey = 'slimeops-room-v6';
+const RoomStateKey = 'slimeops-room-v8';
 const validPoint = (point) => Array.isArray(point) && point.length === 2 && point.every((value) => Number.isFinite(value) && value >= 0 && value <= 100);
+const RestActivities = new Set(['wardrobe', 'chair', 'coffee', 'bed', 'meal', 'stroll']);
 function readRoomState() {
   try {
     const saved = JSON.parse(localStorage.getItem(RoomStateKey));
@@ -54,6 +55,8 @@ function restoreRoomAgent(agent) {
   agent.status = saved.status === 'working' ? 'working' : 'sleeping';
   agent.visualPhase = saved.visualPhase === 'commuting' ? 'commuting' : agent.roomZone === 'work' ? 'working' : undefined;
   agent.loungeStep = Number.isInteger(saved.loungeStep) ? saved.loungeStep : undefined;
+  agent.restUntil = Number.isFinite(saved.restUntil) && saved.restUntil > Date.now() ? saved.restUntil : undefined;
+  agent.restActivity = RestActivities.has(saved.restActivity) ? saved.restActivity : undefined;
   if (validPoint(saved.sleep)) agent.sleep = [...saved.sleep];
   if (Array.isArray(saved.route) && saved.route.length >= 2 && saved.route.length <= 12 && saved.route.every(validPoint) && Number.isInteger(saved.routeIndex) && saved.routeIndex >= 0 && saved.routeIndex < saved.route.length - 1 && Number.isFinite(saved.segmentStart) && saved.segmentStart <= Date.now() && ['rest', 'work'].includes(saved.routeTarget)) {
     agent.route = saved.route.map((point) => [...point]);
@@ -75,7 +78,7 @@ function saveRoomState() {
       position: agent.position, sleep: agent.sleep, roomZone: agent.roomZone, status: agent.status,
       visualPhase: agent.visualPhase, loungeStep: agent.loungeStep, route: agent.route,
       routeIndex: agent.routeIndex, segmentStart: agent.segmentStart, routeTarget: agent.routeTarget,
-      nextRoomZone: agent.nextRoomZone
+      nextRoomZone: agent.nextRoomZone, restUntil: agent.restUntil, restActivity: agent.restActivity
     }]));
     localStorage.setItem(RoomStateKey, JSON.stringify({savedAt:Date.now(), agents}));
   } catch { /* Storage can be unavailable in private browsing. */ }
@@ -170,7 +173,8 @@ function routeToRoom(agent, zone) {
   if (agent.roomZone === zone) return;
   const station = RoomStations[agent.id] || Object.values(RoomStations)[State.agents.indexOf(agent) % Object.keys(RoomStations).length];
   const corridor = zone === 'work' ? station.door : [...station.door].reverse();
-  const destination = zone === 'work' ? agent.work : agent.sleep;
+  const destination = zone === 'work' ? agent.work : station.rest;
+  if (zone === 'work') agent.restActivity = undefined;
   agent.route = zone === 'work'
     ? [[...(agent.position || agent.sleep)], [49,48], ...corridor, [...destination]]
     : [[...(agent.position || agent.work)], ...corridor, [49,48], [...destination]];
@@ -198,6 +202,7 @@ function advanceRoomRoutes() {
       agent.segmentStart += duration;
       if (agent.routeIndex === agent.route.length - 1) {
         agent.roomZone = agent.routeTarget;
+        if (agent.roomZone === 'rest') agent.restUntil = now + 12000 + Math.random() * 6000;
         agent.route = null;
         agent.moving = false;
         agent.visualPhase = agent.roomZone === 'work' ? 'working' : undefined;
@@ -212,9 +217,9 @@ function advanceRoomRoutes() {
   requestAnimationFrame(advanceRoomRoutes);
 }
 function createSlimeUnit(agent) { return `<div class="SlimeUnit" data-agent-id="${agent.id}"><i class="AgentStateBeacon" aria-hidden="true"></i><i class="WorkLabel"></i><i class="SlimeSprite" aria-hidden="true"></i><strong></strong></div>`; }
-function updateSlimeUnit(element, agent) { const commuting = agent.visualPhase === 'commuting'; const [x, y] = agent.position || agent.sleep; const stateClass = commuting ? `Commuting ${agent.idle_mode}` : agent.status === 'working' || agent.simulatedWorking ? 'Working' : `Resting ${agent.idle_mode}${agent.moving ? ' Moving' : ''}`; const status = visualStatus(agent); element.className = `SlimeUnit ${stateClass} Status${uppercase(status[0])}${status.slice(1)}`; element.dataset.break = BreakActivities[agent.id] || 'coffee'; element.style.setProperty('--tone', agent.tone); element.style.setProperty('--hue', agent.hue || '0deg'); element.style.left = `calc(${x}% - 29px)`; element.style.top = `calc(${y}% - 62px)`; element.style.zIndex = String(5 + Math.round(y)); element.querySelector('.WorkLabel').textContent = commuting ? 'en ruta' : status === 'error' ? 'error' : status === 'thinking' ? 'pensando' : agent.action; element.querySelector('strong').textContent = agent.name; }
+function updateSlimeUnit(element, agent) { const commuting = agent.visualPhase === 'commuting'; const [x, y] = agent.position || agent.sleep; const restPose = agent.restActivity === 'bed' ? 'Sleep' : agent.restActivity ? '' : agent.idle_mode; const stateClass = commuting ? `Commuting ${agent.idle_mode}` : agent.status === 'working' || agent.simulatedWorking ? 'Working' : `Resting ${restPose}${agent.moving ? ' Moving' : ''}`; const status = visualStatus(agent); element.className = `SlimeUnit ${stateClass} Status${uppercase(status[0])}${status.slice(1)}${agent.restActivity && !agent.moving ? ` Using${uppercase(agent.restActivity[0])}${agent.restActivity.slice(1)}` : ''}`; element.dataset.break = agent.restActivity || BreakActivities[agent.id] || 'coffee'; element.style.setProperty('--tone', agent.tone); element.style.setProperty('--hue', agent.hue || '0deg'); element.style.left = `calc(${x}% - 29px)`; element.style.top = `calc(${y}% - 62px)`; element.style.zIndex = String(5 + Math.round(y)); element.querySelector('.WorkLabel').textContent = commuting ? 'en ruta' : agent.restActivity === 'bed' ? 'durmiendo' : agent.restActivity === 'meal' ? 'comiendo' : agent.restActivity === 'coffee' ? 'tomando café' : agent.restActivity === 'chair' ? 'sentado' : agent.restActivity === 'wardrobe' ? 'curioseando' : agent.restActivity === 'stroll' ? 'paseando' : status === 'error' ? 'error' : status === 'thinking' ? 'pensando' : agent.action; element.querySelector('strong').textContent = agent.name; }
 function renderSlimeRoom() { const world = $('#roomWorld'); world.style.setProperty('--room-zoom', State.roomZoom); world.style.setProperty('--room-pan-x', `${State.roomPan}%`); world.style.setProperty('--room-pan-y', `${State.roomPanY}%`); State.agents.forEach((agent) => { let element = world.querySelector(`[data-agent-id="${agent.id}"]`); if (!element) { world.insertAdjacentHTML('beforeend', createSlimeUnit(agent)); element = world.querySelector(`[data-agent-id="${agent.id}"]`); } updateSlimeUnit(element, agent); }); const errors = State.agents.filter((agent) => visualStatus(agent) === 'error').map((agent) => agent.name); const activeNames = State.agents.filter((agent) => agent.status === 'working' && visualStatus(agent) !== 'error').map((agent) => agent.name); $('#roomStatus').textContent = State.roomSimulation ? 'SIMULACIÓN VISUAL · TODOS AL TRABAJO' : errors.length ? `ALERTA: ${errors.join(' + ')}` : activeNames.length ? activeNames.join(' + ') : 'Todos descansando'; }
-const RoomVisualFields = ['position', 'sleep', 'roomZone', 'route', 'routeIndex', 'segmentStart', 'routeTarget', 'nextRoomZone', 'moving', 'visualPhase', 'loungeStep'];
+const RoomVisualFields = ['position', 'sleep', 'roomZone', 'route', 'routeIndex', 'segmentStart', 'routeTarget', 'nextRoomZone', 'moving', 'visualPhase', 'loungeStep', 'restUntil', 'restActivity'];
 function startRoomSimulation() {
   if (State.roomSimulation || !State.agents.length) return;
   saveRoomState();
@@ -292,7 +297,7 @@ async function checkForDeployment() { const response = await fetch(`app-version.
 async function syncCodexUsage() { const usage = await fetchApi('/api/codex-usage'); State.codexUsage = usage; renderCodexUsage(); renderCodexUsageChart(); }
 async function syncUsageSeries() { State.agentUsageSeries = await fetchApi('/api/usage-series?minutes=60'); renderAgentUsageChart(); }
 function runLocalTelemetry() { if (State.connected) return; let changed = false; State.agents.forEach((agent) => { if (agent.status !== 'working') return; const rates = {low: 2, medium: 4, high: 7, xhigh: 11}; agent.tokens_used = Math.min(agent.token_budget, agent.tokens_used + rates[agent.reasoning_effort]); if (agent.tokens_used >= agent.token_budget) agent.status = 'sleeping'; changed = true; }); if (changed) { State.lastTelemetryAt = new Date(); renderMetricsPanel(); } }
-function makeSlimesWander() { if (State.roomSimulation) return; State.agents.filter((agent) => agent.status !== 'working' && !agent.route && agent.roomZone === 'rest').forEach((agent) => { const stops = LoungeRoutes[agent.id] || SharedRestStops; agent.loungeStep = ((agent.loungeStep ?? -1) + 1) % stops.length; agent.sleep = [...stops[agent.loungeStep]]; agent.route = [[...agent.position], [...agent.sleep]]; agent.routeIndex = 0; agent.segmentStart = Date.now(); agent.routeTarget = 'rest'; agent.moving = true; }); }
+function makeSlimesWander() { if (State.roomSimulation) return; const now = Date.now(); State.agents.filter((agent) => agent.status !== 'working' && !agent.route && agent.roomZone === 'rest' && now >= (agent.restUntil || 0)).forEach((agent, index) => { agent.loungeStep = ((agent.loungeStep ?? index - 1) + 1) % LoungeVisits.length; const visit = LoungeVisits[agent.loungeStep]; agent.restActivity = visit.activity; agent.sleep = [...visit.point]; agent.route = [[...(agent.position || RoomStations[agent.id]?.rest || [50,58])], ...visit.approach.map((point) => [...point]), [...visit.point]]; agent.routeIndex = 0; agent.segmentStart = now; agent.routeTarget = 'rest'; agent.moving = true; }); }
 function localRouteMission(prompt) { const value = prompt.toLowerCase(); const selected = ['director','nexus']; if (/investiga|fuente|busca|compet|analiza/.test(value)) selected.push('scout'); if (/crea|constru|código|codigo|web|diseña|disena/.test(value)) selected.push('forge'); if (/revisa|calidad|error|test|riesgo/.test(value)) selected.push('sentinel'); if (/diseño|diseno|visual|estética|estetica|ui|ux|pixel|animación|animacion|ilustración|ilustracion|arte|estilo|interfaz|layout/.test(value)) selected.push('muse'); return [...new Set(selected.length === 2 ? [...selected, 'scout'] : selected)]; }
 async function submitMission(event) { event.preventDefault(); const input = $('#missionInput'); const prompt = input.value.trim(); if (!prompt) return; if (State.roomSimulation) stopRoomSimulation(); let assigned = localRouteMission(prompt); State.agents.forEach((agent) => { if (!assigned.includes(agent.id)) { agent.status = 'sleeping'; routeToRoom(agent, 'rest'); } }); triggerWorkAnimation(assigned); $('#missionSummary').textContent = 'Trabajo iniciado. Los slimes van hacia su despacho…'; input.value = ''; renderDashboard(); try { const result = await fetchApi('/api/dispatch', {method:'POST', body:JSON.stringify({prompt})}); assigned = result.agent_ids; triggerWorkAnimation(assigned); $('#missionSummary').textContent = result.plan; } catch { $('#missionSummary').textContent = 'Misión iniciada en modo demo.'; } }
 async function saveAgentControls() { const agent = getSelectedAgent(); const {dirty, ...draft} = getControlDraft(agent); draft.token_budget = Number($('#budgetInput').value); if (draft.token_budget < 500 || draft.token_budget > 24000) { $('#controlFeedback').textContent = 'El límite debe estar entre 500 y 24.000 tokens.'; return; } try { const updated = await fetchApi(`/api/agents/${agent.id}/controls`, {method:'POST', body:JSON.stringify(draft)}); Object.assign(agent, updated); State.controlDrafts.delete(agent.id); $('#controlFeedback').textContent = `${agent.provider} · ${agent.model || 'sin modelo'} guardado.`; } catch (error) { if (!State.connected) { Object.assign(agent, draft); State.controlDrafts.delete(agent.id); $('#controlFeedback').textContent = 'Ajuste solo local: conecta la API para guardarlo.'; } else { $('#controlFeedback').textContent = `No se guardó: ${error.message}`; } } renderDashboard(); }

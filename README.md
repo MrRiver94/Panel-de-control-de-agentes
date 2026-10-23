@@ -18,7 +18,7 @@ cd frontend
 npm run start
 ```
 
-Abre [http://127.0.0.1:4173](http://127.0.0.1:4173). El frontend compila `dist/` al arrancar y se conecta a `http://127.0.0.1:8000`; deja ambas terminales abiertas mientras lo usas. La primera vez, si todavía no existe `backend/.venv`, créalo desde `backend` con `python -m venv .venv` y ejecuta `pip install -r requirements.txt`.
+El navegador se abre automáticamente en [http://127.0.0.1:4173](http://127.0.0.1:4173). El frontend compila `dist/` al arrancar y se conecta a `http://127.0.0.1:8000`; deja ambas terminales abiertas mientras lo usas. La primera vez, si todavía no existe `backend/.venv`, créalo desde `backend` con `python -m venv .venv` y ejecuta `pip install -r requirements.txt`.
 
 El panel publicado se conecta a `http://127.0.0.1:8000`; por eso la API debe estar activa en el mismo equipo para ver telemetría, límites de Codex y auditoría real.
 

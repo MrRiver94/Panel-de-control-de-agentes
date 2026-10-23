@@ -1,5 +1,21 @@
 # Registro de cambios
 
+## 2026-10-23 — Muebles e interacciones en la sala de descanso
+
+- Añadidos un armario, un sillón, una mesa para comer y una cama a escala slime en el espacio común central.
+- Los slimes recorren ocho destinos de descanso y representan acciones al llegar: curiosear, sentarse, comer y dormir.
+- Ampliada la pausa en cada destino a 12–18 segundos para que las interacciones se aprecien mejor.
+- Las rutas de ocio pasan por el suelo abierto y se acercan a cada mueble desde un lado despejado, evitando cruzar paredes de los despachos.
+- Repartidos los muebles a ambos lados de un pasillo central y ajustadas las rutas a sus bordes libres.
+- Recuperada la secuencia animada del slime con café; añadidos gestos de comida y sueño en la cama.
+- Ordenadas las capas por profundidad para que los muebles tapen a los slimes cuando pasan por detrás.
+
+## 2026-10-23 — Plano base de la sala
+
+- Retirada temporal de la ilustración de fondo y sustituida por una cuadrícula oscura de plano.
+- Marcados en rojo los límites de cinco despachos, la zona común y los huecos de las puertas.
+- Conservadas las posiciones de los agentes y los muebles para construir el nuevo paisaje sobre este plano.
+
 ## 2026-10-23 — Consola y estados reactivos
 
 - Añadida una consola desplegable que presenta con marca de tiempo los eventos recibidos de la API local.
@@ -50,4 +66,17 @@
 - Añadido `npm run start` en `frontend/` para compilar y servir el panel en `http://127.0.0.1:4173`.
 - Añadido `backend/start.ps1` para iniciar la API local con el entorno virtual del proyecto.
 - Permitido al frontend local comunicarse con la API mediante CORS.
+
+## 2026-10-23 — Monitor local de sesiones Codex
+
+- Añadida lectura de solo metadatos desde rollouts locales, con estado aproximado y tokens acumulados por sesión.
+- Añadida una lista compacta de sesiones recientes a la sala.
+- No se persisten prompts, respuestas ni transcripciones; la lectura usa una caché breve y un máximo de 40 rollouts recientes.
+- Si Codex App Server no responde, los porcentajes de cuota se recuperan del último evento local de límites.
+- `npm run start` abre automáticamente la interfaz local en el navegador predeterminado.
+
+## 2026-10-23 — Ajustes responsive de la sala
+
+- Las tarjetas de agentes pasan debajo de la sala antes, evitando columnas laterales estrechas.
+- En móviles, la escena decorativa se oculta en una sala compacta y se mantiene accesible el envío de misiones.
 

@@ -59,7 +59,8 @@ El ritmo de agentes deriva de diferencias entre lecturas del medidor acumulado; 
 | GET | `/api/models` | Catálogo de proveedores y modelos disponibles para el selector. |
 | POST | `/api/agents/{id}/profile` | Persiste identidad, estilo y acciones del agente. |
 | POST | `/api/agents/{id}/status` | Recibe un estado operativo explícito y registra el cambio en la auditoría. |
-| GET | `/api/codex-usage` | Lee límites reales del Codex local, con caché corta. |
+| GET | `/api/codex-usage` | Lee límites reales del Codex local desde App Server y usa el último snapshot de los rollouts como alternativa. |
+| GET | `/api/codex-sessions` | Lee metadatos y uso agregado de los rollouts locales, sin conservar mensajes. |
 
 ### Control de acceso y CRUD
 
