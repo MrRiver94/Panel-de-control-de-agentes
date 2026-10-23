@@ -205,6 +205,11 @@
 .RoomCameraControls span { font-size: 7px; }
 
 /* Wide console frame and bounded camera for the live room. */
+.RoomSimulationBar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 8px 0 10px; }
+.RoomSimulationBar button { padding: 9px 12px; border: 2px solid #d9f45a; color: #17272a; background: #d9f45a; cursor: pointer; font: 8px 'Press Start 2P', monospace; }
+.RoomSimulationBar button:hover, .RoomSimulationBar button:focus-visible { background: #fff1d4; outline: 2px solid #fff1d4; outline-offset: 2px; }
+.RoomSimulationBar button.IsRunning { border-color: #79e8ee; color: #d8f6ed; background: #183239; }
+.RoomSimulationBar small { color: #b8cab8; font-size: 9px; }
 .AppShell { max-width: none; width: 100%; padding: 16px clamp(16px, 1.7vw, 34px) 26px; }
 .SlimeRoom { background: #162239; }
 .RoomWorld { --room-zoom: 1; --room-pan-x: 0%; --room-pan-y: 0%; position: absolute; inset: 0; overflow: visible; background: #162239 url('assets/slime-hq-isometric-v5.png') center / 100% 100% no-repeat; transform: translate(var(--room-pan-x), var(--room-pan-y)) scale(var(--room-zoom)); transform-origin: center center; transition: transform .36s cubic-bezier(.2,.8,.25,1); }
