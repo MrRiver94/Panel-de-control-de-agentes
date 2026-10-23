@@ -2,6 +2,7 @@
 
 ## 2026-10-23 — Animaciones integradas de descanso
 
+- Eliminados los objetos de café superpuestos en la sala y las tarjetas: las interacciones usan únicamente el sprite completo del slime.
 - Añadidas secuencias de cuatro poses para beber café, consultar el móvil y jugar con una consola portátil. Cada fotograma incluye al slime sujetando el objeto.
 - La sala y las tarjetas laterales reproducen esas secuencias sin superponer accesorios independientes; se respeta la preferencia de movimiento reducido.
 
