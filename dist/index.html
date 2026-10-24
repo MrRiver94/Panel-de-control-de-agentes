@@ -1,81 +1,417 @@
 <!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#101b25" />
-  <title>SlimeOps — Control Room</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="room-upgrades.css" />
-  <link rel="stylesheet" href="codex-sessions.css" />
-</head>
-<body>
-  <main class="AppShell">
-    <header class="AppHeader"><div class="Brand"><i></i><span>SLIMEOPS<br>CONTROL ROOM</span></div><div class="HeaderActions"><button id="openAccess" type="button">ACCESO</button><div class="ApiStatus" id="apiStatus">● API DEMO</div></div></header>
-    <section class="TopControls">
-      <article class="Panel ControlPanel"><div class="PanelTitle">CONTROL DEL AGENTE</div><div class="ControlFields"><label>AGENTE<select id="agentSelect"></select></label><label>MÁX. TOKENS<input id="budgetInput" type="number" min="500" max="24000" step="500" /></label></div><div class="ControlFields ModelFields"><label>PROVEEDOR<select id="providerSelect"></select></label><label>MODELO<select id="modelSelect"></select></label></div><small class="ModelHint" id="modelHint">Cargando modelos configurados…</small><div class="EffortSelector" id="effortSelector"></div><button class="PrimaryButton" id="saveControls" type="button">GUARDAR AJUSTES</button><small class="ControlFeedback" id="controlFeedback" role="status"></small><button class="SecondaryButton" id="openCustomizer" type="button">PERSONALIZAR AGENTE</button></article>
-      <article class="Panel MetricsPanel"><div class="PanelTitle">SALUD OPERATIVA <i class="LivePulse"></i></div><div class="MetricGrid"><div><span>USO</span><b id="budgetUsage">—</b></div><div><span>MARGEN</span><b id="budgetMargin">—</b></div><div><span>ACTIVOS</span><b id="activeAgents">—</b></div><div><span>ESTADO</span><b id="budgetHealth">—</b></div></div><div class="BudgetBar"><i id="budgetBar"></i></div><div class="MetricFoot"><span id="budgetNumbers">—</span><span id="efficiencyMessage">—</span></div><small class="TelemetryStamp" id="telemetryStamp">Esperando telemetría</small><section class="UsagePlot" aria-label="Ritmo de uso de agentes"><div class="UsagePlotTitle"><b>TOKENS / MIN · AGENTES</b><span id="agentPeak">PICO —</span></div><div class="UsagePlotCanvas" id="agentUsageChart" role="img" aria-label="Esperando muestras de uso"></div><div class="UsagePlotAxis"><span>HACE 60 MIN</span><span>AHORA</span></div><small class="UsagePlotNote" id="agentUsageNote">Recopilando muestras del panel…</small></section></article>
-      <article class="Panel CodexUsagePanel"><div class="PanelTitle">CAPACIDAD CODEX <button id="refreshCodexUsage" type="button" aria-label="Actualizar uso de Codex">↻</button></div><div class="CapacityGrid"><div><span>VENTANA 5H</span><b id="fiveHourRemaining">—</b><small id="fiveHourReset">Cargando…</small></div><div><span>SEMANAL</span><b id="weeklyRemaining">—</b><small id="weeklyReset">Cargando…</small></div></div><div class="CodexFacts"><span id="codexPlan">Plan —</span><span id="resetCredits">Recargas —</span><span id="dailyTokens">Actividad —</span></div><small class="CodexSource" id="codexUsageStatus">Conecta la API local para leer tus límites.</small><section class="UsagePlot" aria-label="Uso diario de Codex"><div class="UsagePlotTitle"><b>TOKENS / DÍA · CODEX</b><span id="codexPeak">PICO —</span></div><div class="UsagePlotCanvas" id="codexUsageChart" role="img" aria-label="Esperando historial diario de Codex"></div><div class="UsagePlotAxis"><span>ÚLTIMOS 7 DÍAS</span><span>HOY</span></div><small class="UsagePlotNote" id="codexUsageNote">Los datos diarios se leen de Codex local.</small></section></article>
-      <article class="Panel ActivityPanel"><div class="PanelTitle">ACTIVIDAD <button class="AuditOpenButton" id="openAudit" type="button">HISTORIAL</button></div><div class="ActivityList" id="activityLog"></div></article>
-      <article class="Panel CodexSessionsPanel"><div class="PanelTitle">SESIONES CODEX <i class="LivePulse"></i></div><small id="codexSessionsStatus">Leyendo actividad local…</small><div id="codexSessionsList" class="CodexSessionsList"></div></article>
-    </section>
-    <div class="RoomSimulationBar"><button id="simulateAll" type="button">SIMULAR: TODOS AL TRABAJO</button><small>Prueba visual de recorridos · no crea misiones ni consume tokens</small></div>
-    <section class="LiveOpsLayout" aria-label="Centro de operaciones en directo">
-      <aside class="AgentWatchRail AgentWatchRailLeft" id="agentWatchRailLeft" aria-label="Agentes en directo, columna izquierda"></aside>
-      <section class="SlimeRoom" id="slimeRoom">
-      <div class="RoomWorld" id="roomWorld" aria-hidden="true">
-      <svg class="RoomBlueprint" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
-        <g class="PlanZones">
-          <path d="M330 215 L670 215 L710 300 L650 405 L500 535 L350 405 L290 300 Z" />
-        </g>
-        <g class="PlanWalls">
-          <path d="M345 0 L655 0 L720 100 L720 151 M720 191 L650 210 L555 210 M445 210 L350 210 L280 180 L280 100 Z" />
-          <path d="M50 150 L235 50 L325 125 L325 180 M325 235 L315 280 L250 330 L45 265 Z M45 265 L50 150" />
-          <path d="M950 150 L765 50 L675 125 L675 180 M675 235 L685 280 L750 330 L955 265 Z M955 265 L950 150" />
-          <path d="M45 390 L170 325 L285 350 L330 390 M330 440 L330 490 L170 590 L45 520 Z M45 520 L45 390" />
-          <path d="M955 390 L830 325 L715 350 L670 390 M670 440 L670 490 L830 590 L955 520 Z M955 520 L955 390" />
-          <path d="M325 280 L365 300 M635 300 L675 280 M330 490 L350 405 M670 490 L650 405" />
-        </g>
-        <g class="PlanDoors">
-          <path d="M445 210 L445 175 M555 210 L555 175 M325 180 L285 180 M675 180 L715 180 M330 390 L290 390 M670 390 L710 390" />
-          <path d="M445 175 A35 35 0 0 1 480 210 M555 175 A35 35 0 0 0 520 210 M285 180 A40 40 0 0 1 325 220 M715 180 A40 40 0 0 0 675 220 M290 390 A40 40 0 0 1 330 430 M710 390 A40 40 0 0 0 670 430" />
-        </g>
-        <g class="PlanLabels">
-          <text x="500" y="92">DESPACHO NEXUS</text>
-          <text x="182" y="190">DESPACHO SCOUT</text>
-          <text x="818" y="190">DESPACHO DIRECTOR</text>
-          <text x="185" y="470">DESPACHO FORGE</text>
-          <text x="815" y="470">DESPACHO SENTINEL</text>
-          <text x="500" y="285">ZONA COMÚN</text>
-          <text x="500" y="312">SALA DE DESCANSO</text>
-        </g>
-        <g class="PlanDimensions"><path d="M25 45 V20 H50 M950 20 H975 V45 M25 555 V580 H50 M950 580 H975 V555" /><text x="165" y="32">PLANO V 01</text></g>
-      </svg>
-      <div class="RoomHeader"><span>SALA EN DIRECTO</span><small id="roomStatus">En espera</small></div>
-      <aside class="DigitalClock" id="digitalClock" aria-label="Fecha y hora actual">
-        <span class="ClockCaption">HORA LOCAL</span><strong id="digitalTime">00:00:00</strong>
-        <span class="ClockDate" id="digitalDate">LUNES · 01 ENE 2026</span>
-      </aside>
-      <i class="RoomWindow Left"></i><i class="RoomWindow Right"></i><i class="RoomRug"></i><i class="RoomPlant"></i>
-      <i class="Bed Director"></i><i class="Bed Nexus"></i><i class="Bed Scout"></i><i class="Bed Forge"></i><i class="Bed Sentinel"></i>
-      <i class="Desk Director"></i><i class="Desk Nexus"></i><i class="Desk Scout"></i><i class="Desk Forge"></i><i class="Desk Sentinel"></i>
-      <i class="RoomProp SlimeWardrobe" aria-hidden="true"></i>
-      <i class="RoomProp SlimeChair" aria-hidden="true"></i>
-      <i class="RoomProp SnackTable" aria-hidden="true"></i>
-      <i class="RoomProp SlimeBed" aria-hidden="true"></i>
-      </div>
-      <nav class="RoomCameraControls" aria-label="Controles de cámara"><span>CÁMARA</span><button type="button" data-camera="out" aria-label="Alejar">−</button><button type="button" data-camera="left" aria-label="Mover a la izquierda">‹</button><button type="button" data-camera="up" aria-label="Mover arriba">↑</button><button type="button" data-camera="center" aria-label="Centrar cámara">●</button><button type="button" data-camera="down" aria-label="Mover abajo">↓</button><button type="button" data-camera="right" aria-label="Mover a la derecha">›</button><button type="button" data-camera="in" aria-label="Acercar">+</button></nav>
-      <form class="MissionPopup" id="missionForm"><label for="missionInput">NUEVA MISIÓN</label><div><input id="missionInput" required autocomplete="off" placeholder="Escribe una orden…" /><button>ENVIAR</button></div><small id="missionSummary">Los slimes descansan.</small></form>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101b25" />
+    <title>SlimeOps — Control Room</title>
+    <link rel="stylesheet" href="styles/app.css" />
+  </head>
+  <body>
+    <main class="AppShell">
+      <header class="AppHeader">
+        <div class="Brand">
+          <i></i><span>SLIMEOPS<br />CONTROL ROOM</span>
+        </div>
+        <div class="HeaderActions">
+          <button id="openAccess" type="button">ACCESO</button>
+          <div class="ApiStatus" id="apiStatus">● API DEMO</div>
+        </div>
+      </header>
+      <section class="TopControls">
+        <article class="Panel ControlPanel">
+          <div class="PanelTitle">CONTROL DEL AGENTE</div>
+          <div class="ControlFields">
+            <label>AGENTE<select id="agentSelect"></select></label
+            ><label
+              >MÁX. TOKENS<input id="budgetInput" type="number" min="500" max="24000" step="500"
+            /></label>
+          </div>
+          <div class="ControlFields ModelFields">
+            <label>PROVEEDOR<select id="providerSelect"></select></label
+            ><label>MODELO<select id="modelSelect"></select></label>
+          </div>
+          <small class="ModelHint" id="modelHint">Cargando modelos configurados…</small>
+          <div class="EffortSelector" id="effortSelector"></div>
+          <button class="PrimaryButton" id="saveControls" type="button">GUARDAR AJUSTES</button
+          ><small class="ControlFeedback" id="controlFeedback" role="status"></small
+          ><button class="SecondaryButton" id="openCustomizer" type="button">
+            PERSONALIZAR AGENTE
+          </button>
+        </article>
+        <article class="Panel MetricsPanel">
+          <div class="PanelTitle">SALUD OPERATIVA <i class="LivePulse"></i></div>
+          <div class="MetricGrid">
+            <div><span>USO</span><b id="budgetUsage">—</b></div>
+            <div><span>MARGEN</span><b id="budgetMargin">—</b></div>
+            <div><span>ACTIVOS</span><b id="activeAgents">—</b></div>
+            <div><span>ESTADO</span><b id="budgetHealth">—</b></div>
+          </div>
+          <div class="BudgetBar"><i id="budgetBar"></i></div>
+          <div class="MetricFoot">
+            <span id="budgetNumbers">—</span><span id="efficiencyMessage">—</span>
+          </div>
+          <small class="TelemetryStamp" id="telemetryStamp">Esperando telemetría</small>
+          <section class="UsagePlot" aria-label="Ritmo de uso de agentes">
+            <div class="UsagePlotTitle">
+              <b>TOKENS / MIN · AGENTES</b><span id="agentPeak">PICO —</span>
+            </div>
+            <div
+              class="UsagePlotCanvas"
+              id="agentUsageChart"
+              role="img"
+              aria-label="Esperando muestras de uso"
+            ></div>
+            <div class="UsagePlotAxis"><span>HACE 60 MIN</span><span>AHORA</span></div>
+            <small class="UsagePlotNote" id="agentUsageNote">Recopilando muestras del panel…</small>
+          </section>
+        </article>
+        <article class="Panel CodexUsagePanel">
+          <div class="PanelTitle">
+            CAPACIDAD CODEX
+            <button id="refreshCodexUsage" type="button" aria-label="Actualizar uso de Codex">
+              ↻
+            </button>
+          </div>
+          <div class="CapacityGrid">
+            <div>
+              <span>VENTANA 5H</span><b id="fiveHourRemaining">—</b
+              ><small id="fiveHourReset">Cargando…</small>
+            </div>
+            <div>
+              <span>SEMANAL</span><b id="weeklyRemaining">—</b
+              ><small id="weeklyReset">Cargando…</small>
+            </div>
+          </div>
+          <div class="CodexFacts">
+            <span id="codexPlan">Plan —</span><span id="resetCredits">Recargas —</span
+            ><span id="dailyTokens">Actividad —</span>
+          </div>
+          <small class="CodexSource" id="codexUsageStatus"
+            >Conecta la API local para leer tus límites.</small
+          >
+          <section class="UsagePlot" aria-label="Uso diario de Codex">
+            <div class="UsagePlotTitle">
+              <b>TOKENS / DÍA · CODEX</b><span id="codexPeak">PICO —</span>
+            </div>
+            <div
+              class="UsagePlotCanvas"
+              id="codexUsageChart"
+              role="img"
+              aria-label="Esperando historial diario de Codex"
+            ></div>
+            <div class="UsagePlotAxis"><span>ÚLTIMOS 7 DÍAS</span><span>HOY</span></div>
+            <small class="UsagePlotNote" id="codexUsageNote"
+              >Los datos diarios se leen de Codex local.</small
+            >
+          </section>
+        </article>
+        <article class="Panel ActivityPanel">
+          <div class="PanelTitle">
+            ACTIVIDAD
+            <button class="AuditOpenButton" id="openAudit" type="button">HISTORIAL</button>
+          </div>
+          <div class="ActivityList" id="activityLog"></div>
+        </article>
+        <article class="Panel CodexSessionsPanel">
+          <div class="PanelTitle">SESIONES CODEX <i class="LivePulse"></i></div>
+          <small id="codexSessionsStatus">Leyendo actividad local…</small>
+          <div id="codexSessionsList" class="CodexSessionsList"></div>
+        </article>
       </section>
-      <aside class="AgentWatchRail AgentWatchRailRight" id="agentWatchRailRight" aria-label="Agentes en directo, columna derecha"></aside>
-    </section>
-    <details class="TerminalDrawer" id="terminalDrawer"><summary><span>CONSOLA DE EVENTOS</span><small id="terminalCount">0 REGISTROS</small><span class="TerminalChevron" aria-hidden="true">▾</span></summary><div class="TerminalBody"><p>Eventos recibidos de la API local. Las llamadas internas a herramientas aparecerán cuando el ejecutor las registre.</p><div class="TerminalFeed" id="terminalFeed" role="log" aria-label="Eventos recientes de agentes"></div></div></details>
-  </main>
-  <dialog class="AuditDialog" id="auditDialog"><div class="AuditDialogHeader"><div><span>REGISTRO PERSISTENTE</span><small id="auditCount">AUDITORÍA LOCAL</small></div><button id="closeAudit" type="button" aria-label="Cerrar historial">×</button></div><p class="AuditCaption">Misiones, cambios de control y actividad declarada por cada agente.</p><div class="AuditHistory" id="auditHistory"></div></dialog>
-  <dialog class="CustomizerDialog" id="customizerDialog"><form id="customizerForm" method="dialog"><header class="CustomizerHeader"><div><span>LABORATORIO DEL AGENTE</span><small>IDENTIDAD · ESTILO · ACCIONES</small></div><button id="closeCustomizer" type="button" aria-label="Cerrar personalización">×</button></header><div class="CustomizerBody"><aside class="CustomizerPreview"><div class="PreviewStage"><i class="PreviewSlime" id="previewSlime"></i></div><strong id="previewName">NEXUS</strong><small id="previewRole">Coordinación</small><p id="previewActions">COORDINAR · PLANIFICAR</p></aside><section class="CustomizerFields"><label>AGENTE<select id="profileAgentSelect"></select></label><div class="ProfileTwoColumns"><label>NOMBRE<input id="profileName" maxlength="18" required /></label><label>ROL<input id="profileRole" maxlength="42" required /></label></div><label>ACCIÓN POR DEFECTO<input id="profileAction" maxlength="80" required /></label><div class="ProfileTwoColumns"><label>COLOR<input id="profileTone" type="color" /></label><label>MATIZ<select id="profileHue"><option value="-100deg">DORADO</option><option value="-45deg">CORAL</option><option value="0deg">CIAN</option><option value="68deg">LIMA</option><option value="135deg">ROSA</option><option value="230deg">VIOLETA</option></select></label></div><label>ZONA DE DESCANSO<select id="profileIdle"><option value="Coffee">CAFÉ</option><option value="Eating">COMEDOR</option><option value="Sleep">DORMITORIO</option></select></label><fieldset><legend>ACCIONES HABILITADAS</legend><div class="ActionChoices" id="profileActions"><label><input type="checkbox" value="coordinar" />COORDINAR</label><label><input type="checkbox" value="investigar" />INVESTIGAR</label><label><input type="checkbox" value="construir" />CONSTRUIR</label><label><input type="checkbox" value="revisar" />REVISAR</label><label><input type="checkbox" value="diseñar" />DISEÑAR</label></div></fieldset><small class="CustomizerHint" id="customizerHint">Los cambios se guardan en la auditoría local.</small></section></div><footer class="CustomizerFooter"><button class="SecondaryButton" id="cancelCustomizer" type="button">CANCELAR</button><button class="PrimaryButton" type="submit">GUARDAR PERFIL</button></footer></form></dialog>
-  <dialog class="AccessDialog" id="accessDialog"><header class="CustomizerHeader"><div><span>USUARIOS Y ROLES</span><small>CONTROL DE ACCESO LOCAL</small></div><button id="closeAccess" type="button">×</button></header><div class="AccessBody"><label>SESIÓN ACTIVA<select id="activeUserSelect"></select></label><div class="AccessTree" id="accessTree"></div><form id="roleForm"><label>NUEVO ROL<input id="newRoleName" placeholder="Ej. EDITOR" /></label><label>PERMISOS<input id="newRolePermissions" value="dashboard.view" /></label><button class="SecondaryButton" type="submit">CREAR ROL</button></form><form id="userForm"><label>NUEVO USUARIO<input id="newUserName" placeholder="Nombre" /></label><label>ROL<select id="newUserRole"></select></label><button class="PrimaryButton" type="submit">CREAR USUARIO</button></form></div></dialog>
-  <dialog class="AccessDialog" id="createAgentDialog"><header class="CustomizerHeader"><div><span>CREAR AGENTE</span><small>REGISTRO PERSISTENTE</small></div><button id="closeCreateAgent" type="button">×</button></header><form class="AccessBody" id="createAgentForm"><label>NOMBRE<input id="createAgentName" maxlength="18" required placeholder="Ej. ORBIT" /></label><label>ROL<input id="createAgentRole" maxlength="42" required placeholder="Ej. Analista" /></label><div class="AccessGrid"><label>COLOR<input id="createAgentTone" type="color" value="#57e5ff" /></label><label>ESFUERZO<select id="createAgentEffort"><option value="low">LOW</option><option value="medium" selected>MEDIUM</option><option value="high">HIGH</option><option value="xhigh">XHIGH</option></select></label></div><div class="AccessGrid"><label>TOKENS<input id="createAgentBudget" type="number" min="500" max="24000" value="5000" required /></label><label>DESCANSO<select id="createAgentIdle"><option value="Coffee">CAFÉ</option><option value="Eating">COMEDOR</option><option value="Sleep">DORMIR</option></select></label></div><label>ACCIÓN INICIAL<input id="createAgentAction" required value="analizando" /></label><fieldset><legend>ACCIONES</legend><div class="ActionChoices" id="createAgentActions"><label><input type="checkbox" value="coordinar" checked />COORDINAR</label><label><input type="checkbox" value="investigar" />INVESTIGAR</label><label><input type="checkbox" value="construir" />CONSTRUIR</label><label><input type="checkbox" value="revisar" />REVISAR</label><label><input type="checkbox" value="diseñar" />DISEÑAR</label></div></fieldset><button class="PrimaryButton" type="submit">CREAR Y GUARDAR</button></form></dialog>
-  <script src="codex-sessions.js"></script>
-  <script src="app.js"></script>
-</body>
+      <div class="RoomSimulationBar">
+        <button id="simulateAll" type="button">SIMULAR: TODOS AL TRABAJO</button
+        ><small>Prueba visual de recorridos · no crea misiones ni consume tokens</small>
+      </div>
+      <section class="LiveOpsLayout" aria-label="Centro de operaciones en directo">
+        <aside
+          class="AgentWatchRail AgentWatchRailLeft"
+          id="agentWatchRailLeft"
+          aria-label="Agentes en directo, columna izquierda"
+        ></aside>
+        <section class="SlimeRoom" id="slimeRoom">
+          <div class="RoomHud">
+            <div class="RoomHeader">
+              <span>SALA EN DIRECTO</span><small id="roomStatus">En espera</small>
+            </div>
+            <aside class="DigitalClock" id="digitalClock" aria-label="Fecha y hora actual">
+              <span class="ClockCaption">HORA LOCAL</span><strong id="digitalTime">00:00:00</strong>
+              <span class="ClockDate" id="digitalDate">LUNES · 01 ENE 2026</span>
+            </aside>
+          </div>
+          <div class="RoomSceneFrame">
+            <div class="RoomViewport" id="roomViewport">
+              <div class="RoomWorld" id="roomWorld" aria-hidden="true">
+                <div class="RoomAmbience" aria-hidden="true">
+                  <i class="PondRipple PondRippleOne"></i><i class="PondRipple PondRippleTwo"></i>
+                  <i class="CrystalAura CrystalAuraOne"></i
+                  ><i class="CrystalAura CrystalAuraTwo"></i
+                  ><i class="CrystalAura CrystalAuraThree"></i>
+                  <div class="BirdFlight BirdFlightOne">
+                    <i class="BirdSprite"></i><i class="BirdGlide"></i>
+                  </div>
+                  <div class="BirdFlight BirdFlightTwo">
+                    <i class="BirdSprite"></i><i class="BirdGlide"></i>
+                  </div>
+                  <div class="BirdFlight BirdFlightThree">
+                    <i class="BirdSprite"></i><i class="BirdGlide"></i>
+                  </div>
+                  <div class="ForestCritter CritterRabbit">
+                    <svg viewBox="0 0 48 40">
+                      <path d="M10 28h5v-5h5v-4h10v4h7v5h5v7H10z" fill="#b77a4f" />
+                      <path d="M20 19h4V4h5v15h4V7h5v14h-4v5H20z" fill="#d49a66" />
+                      <path d="M25 23h3v3h-3zm12 1h3v3h-3z" fill="#17292c" />
+                      <path d="M12 31h8v4h-8zm20 0h9v4h-9z" fill="#704b3d" />
+                      <path d="M9 26H4v6h7" fill="#efe3c6" />
+                    </svg>
+                  </div>
+                  <div class="ForestCritter CritterSquirrel">
+                    <svg viewBox="0 0 48 42">
+                      <path d="M9 27h6v-7h6v-5h11v4h6v8h5v7H9z" fill="#bb7040" />
+                      <path d="M27 19q-10-14 0-17 13 0 10 12l-5 8z" fill="#dc984e" />
+                      <path d="M19 27h4v4h-4zm13-2h3v3h-3z" fill="#182b32" />
+                      <path d="M12 33h11v5H12zm18 0h10v5H30z" fill="#704437" />
+                      <path d="M8 27H3v7h7" fill="#e7c579" />
+                    </svg>
+                  </div>
+                  <div class="MoleSpot">
+                    <i class="MoleDirt"></i
+                    ><svg class="MoleSprite" viewBox="0 0 52 42">
+                      <path d="M6 29h5v-7h5v-6h20v5h7v8h4v9H6z" fill="#715044" />
+                      <path d="M13 18h9v-5h16v6h-5v8H13z" fill="#a77865" />
+                      <path d="M25 21h3v3h-3zm9 0h3v3h-3z" fill="#f5ecda" />
+                      <path d="M24 25h10v3H24z" fill="#34313c" />
+                      <path d="M10 33h10v5H10zm24 0h11v5H34z" fill="#4d3d3c" />
+                    </svg>
+                  </div>
+                  <div class="PondFish PondFishOne">
+                    <svg viewBox="0 0 48 28">
+                      <path d="M5 9h23V4h9v5h7v14h-7v5h-9v-5H5z" fill="#2c6e9b" />
+                      <path d="M9 12h18v-4h8v4h5v8h-5v4h-8v-4H9z" fill="#73cbe1" />
+                      <path d="M32 13h4v4h-4z" fill="#f6dd73" />
+                      <path d="M34 14h2v2h-2z" fill="#1b3039" />
+                    </svg>
+                  </div>
+                  <div class="PondFish PondFishTwo">
+                    <svg viewBox="0 0 48 28">
+                      <path d="M5 9h23V4h9v5h7v14h-7v5h-9v-5H5z" fill="#4477b0" />
+                      <path d="M9 12h18v-4h8v4h5v8h-5v4h-8v-4H9z" fill="#9ad8e5" />
+                      <path d="M32 13h4v4h-4z" fill="#f6dd73" />
+                      <path d="M34 14h2v2h-2z" fill="#1b3039" />
+                    </svg>
+                  </div>
+                </div>
+                <div class="RoomZoneLabel CaveZoneLabel">
+                  <b>CUEVA DEL EQUIPO</b><small>DESCANSO COMPARTIDO</small>
+                </div>
+                <div class="RoomZoneLabel FieldZoneLabel">
+                  <b>CAMPO DE TRABAJO</b><small>ZONA ABIERTA</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          <nav class="RoomCameraControls" aria-label="Controles de cámara">
+            <span>CÁMARA</span><button type="button" data-camera="out" aria-label="Alejar">−</button
+            ><button type="button" data-camera="left" aria-label="Mover la vista a la izquierda">
+              ‹</button
+            ><button type="button" data-camera="up" aria-label="Mover la vista arriba">↑</button
+            ><button
+              class="RoomCameraFit"
+              type="button"
+              data-camera="center"
+              aria-label="Ver todo el mapa y centrar cámara"
+            >
+              VER TODO</button
+            ><button type="button" data-camera="down" aria-label="Mover la vista abajo">↓</button
+            ><button type="button" data-camera="right" aria-label="Mover la vista a la derecha">
+              ›</button
+            ><button type="button" data-camera="in" aria-label="Acercar">+</button>
+          </nav>
+          <form class="MissionPopup" id="missionForm">
+            <label for="missionInput">NUEVA MISIÓN</label>
+            <div>
+              <input
+                id="missionInput"
+                required
+                autocomplete="off"
+                placeholder="Escribe una orden…"
+              /><button>ENVIAR</button>
+            </div>
+            <small id="missionSummary">Los slimes descansan.</small>
+          </form>
+        </section>
+        <aside
+          class="AgentWatchRail AgentWatchRailRight"
+          id="agentWatchRailRight"
+          aria-label="Agentes en directo, columna derecha"
+        ></aside>
+      </section>
+      <details class="TerminalDrawer" id="terminalDrawer">
+        <summary>
+          <span>CONSOLA DE EVENTOS</span><small id="terminalCount">0 REGISTROS</small
+          ><span class="TerminalChevron" aria-hidden="true">▾</span>
+        </summary>
+        <div class="TerminalBody">
+          <p>
+            Eventos recibidos de la API local. Las llamadas internas a herramientas aparecerán
+            cuando el ejecutor las registre.
+          </p>
+          <div
+            class="TerminalFeed"
+            id="terminalFeed"
+            role="log"
+            aria-label="Eventos recientes de agentes"
+          ></div>
+        </div>
+      </details>
+    </main>
+    <dialog class="AuditDialog" id="auditDialog">
+      <div class="AuditDialogHeader">
+        <div><span>REGISTRO PERSISTENTE</span><small id="auditCount">AUDITORÍA LOCAL</small></div>
+        <button id="closeAudit" type="button" aria-label="Cerrar historial">×</button>
+      </div>
+      <p class="AuditCaption">
+        Misiones, cambios de control y actividad declarada por cada agente.
+      </p>
+      <div class="AuditHistory" id="auditHistory"></div>
+    </dialog>
+    <dialog class="CustomizerDialog" id="customizerDialog">
+      <form id="customizerForm" method="dialog">
+        <header class="CustomizerHeader">
+          <div><span>LABORATORIO DEL AGENTE</span><small>IDENTIDAD · ESTILO · ACCIONES</small></div>
+          <button id="closeCustomizer" type="button" aria-label="Cerrar personalización">×</button>
+        </header>
+        <div class="CustomizerBody">
+          <aside class="CustomizerPreview">
+            <div class="PreviewStage"><i class="PreviewSlime" id="previewSlime"></i></div>
+            <strong id="previewName">NEXUS</strong><small id="previewRole">Coordinación</small>
+            <p id="previewActions">COORDINAR · PLANIFICAR</p>
+          </aside>
+          <section class="CustomizerFields">
+            <label>AGENTE<select id="profileAgentSelect"></select></label>
+            <div class="ProfileTwoColumns">
+              <label>NOMBRE<input id="profileName" maxlength="18" required /></label
+              ><label>ROL<input id="profileRole" maxlength="42" required /></label>
+            </div>
+            <label>ACCIÓN POR DEFECTO<input id="profileAction" maxlength="80" required /></label>
+            <div class="ProfileTwoColumns">
+              <label>COLOR<input id="profileTone" type="color" /></label
+              ><label
+                >MATIZ<select id="profileHue">
+                  <option value="-100deg">DORADO</option>
+                  <option value="-45deg">CORAL</option>
+                  <option value="0deg">CIAN</option>
+                  <option value="68deg">LIMA</option>
+                  <option value="135deg">ROSA</option>
+                  <option value="230deg">VIOLETA</option>
+                </select></label
+              >
+            </div>
+            <label
+              >ZONA DE DESCANSO<select id="profileIdle">
+                <option value="Coffee">CAFÉ</option>
+                <option value="Eating">COMEDOR</option>
+                <option value="Sleep">DORMITORIO</option>
+              </select></label
+            >
+            <fieldset>
+              <legend>ACCIONES HABILITADAS</legend>
+              <div class="ActionChoices" id="profileActions">
+                <label><input type="checkbox" value="coordinar" />COORDINAR</label
+                ><label><input type="checkbox" value="investigar" />INVESTIGAR</label
+                ><label><input type="checkbox" value="construir" />CONSTRUIR</label
+                ><label><input type="checkbox" value="revisar" />REVISAR</label
+                ><label><input type="checkbox" value="diseñar" />DISEÑAR</label>
+              </div>
+            </fieldset>
+            <small class="CustomizerHint" id="customizerHint"
+              >Los cambios se guardan en la auditoría local.</small
+            >
+          </section>
+        </div>
+        <footer class="CustomizerFooter">
+          <button class="SecondaryButton" id="cancelCustomizer" type="button">CANCELAR</button
+          ><button class="PrimaryButton" type="submit">GUARDAR PERFIL</button>
+        </footer>
+      </form>
+    </dialog>
+    <dialog class="AccessDialog" id="accessDialog">
+      <header class="CustomizerHeader">
+        <div><span>USUARIOS Y ROLES</span><small>CONTROL DE ACCESO LOCAL</small></div>
+        <button id="closeAccess" type="button">×</button>
+      </header>
+      <div class="AccessBody">
+        <label>SESIÓN ACTIVA<select id="activeUserSelect"></select></label>
+        <div class="AccessTree" id="accessTree"></div>
+        <form id="roleForm">
+          <label>NUEVO ROL<input id="newRoleName" placeholder="Ej. EDITOR" /></label
+          ><label>PERMISOS<input id="newRolePermissions" value="dashboard.view" /></label
+          ><button class="SecondaryButton" type="submit">CREAR ROL</button>
+        </form>
+        <form id="userForm">
+          <label>NUEVO USUARIO<input id="newUserName" placeholder="Nombre" /></label
+          ><label>ROL<select id="newUserRole"></select></label
+          ><button class="PrimaryButton" type="submit">CREAR USUARIO</button>
+        </form>
+      </div>
+    </dialog>
+    <dialog class="AccessDialog" id="createAgentDialog">
+      <header class="CustomizerHeader">
+        <div><span>CREAR AGENTE</span><small>REGISTRO PERSISTENTE</small></div>
+        <button id="closeCreateAgent" type="button">×</button>
+      </header>
+      <form class="AccessBody" id="createAgentForm">
+        <label
+          >NOMBRE<input
+            id="createAgentName"
+            maxlength="18"
+            required
+            placeholder="Ej. ORBIT" /></label
+        ><label
+          >ROL<input id="createAgentRole" maxlength="42" required placeholder="Ej. Analista"
+        /></label>
+        <div class="AccessGrid">
+          <label>COLOR<input id="createAgentTone" type="color" value="#57e5ff" /></label
+          ><label
+            >ESFUERZO<select id="createAgentEffort">
+              <option value="low">LOW</option>
+              <option value="medium" selected>MEDIUM</option>
+              <option value="high">HIGH</option>
+              <option value="xhigh">XHIGH</option>
+            </select></label
+          >
+        </div>
+        <div class="AccessGrid">
+          <label
+            >TOKENS<input
+              id="createAgentBudget"
+              type="number"
+              min="500"
+              max="24000"
+              value="5000"
+              required /></label
+          ><label
+            >DESCANSO<select id="createAgentIdle">
+              <option value="Coffee">CAFÉ</option>
+              <option value="Eating">COMEDOR</option>
+              <option value="Sleep">DORMIR</option>
+            </select></label
+          >
+        </div>
+        <label>ACCIÓN INICIAL<input id="createAgentAction" required value="analizando" /></label>
+        <fieldset>
+          <legend>ACCIONES</legend>
+          <div class="ActionChoices" id="createAgentActions">
+            <label><input type="checkbox" value="coordinar" checked />COORDINAR</label
+            ><label><input type="checkbox" value="investigar" />INVESTIGAR</label
+            ><label><input type="checkbox" value="construir" />CONSTRUIR</label
+            ><label><input type="checkbox" value="revisar" />REVISAR</label
+            ><label><input type="checkbox" value="diseñar" />DISEÑAR</label>
+          </div>
+        </fieldset>
+        <button class="PrimaryButton" type="submit">CREAR Y GUARDAR</button>
+      </form>
+    </dialog>
+    <script type="module" src="app.js"></script>
+  </body>
 </html>

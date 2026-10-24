@@ -1,0 +1,354 @@
+/* Distinct work loops give each busy slime a changing, readable task. */
+.SlimeUnit.Working .ActionProp {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  left: 43px;
+  top: 26px;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  border: 2px solid #28353a;
+  background: #d9f45a;
+  color: #182329;
+  box-shadow: 2px 2px 0 #182329;
+  font:
+    bold 11px/1 'Space Mono',
+    monospace;
+  animation: propPop 0.8s steps(2) infinite;
+}
+.SlimeUnit.Working .ActionProp::after {
+  content: attr(data-glyph);
+}
+.SlimeUnit.Working .SlimeSprite {
+  animation-duration: 1.15s;
+  animation-iteration-count: infinite;
+  animation-timing-function: steps(3, end);
+}
+.SlimeUnit.WorkActionTyping .SlimeSprite {
+  animation-name: workTyping;
+}
+.SlimeUnit.WorkActionAnalyzing .SlimeSprite {
+  animation-name: workAnalyze;
+}
+.SlimeUnit.WorkActionThinking .SlimeSprite {
+  animation-name: workThink;
+}
+.SlimeUnit.WorkActionReading .SlimeSprite {
+  animation-name: workRead;
+}
+.SlimeUnit.WorkActionDebugging .SlimeSprite {
+  animation-name: workDebug;
+}
+.SlimeUnit.WorkActionPlanning .SlimeSprite {
+  animation-name: workPlan;
+}
+.SlimeUnit.WorkActionTesting .SlimeSprite {
+  animation-name: workTest;
+}
+.SlimeUnit.WorkActionReviewing .SlimeSprite {
+  animation-name: workReview;
+}
+.SlimeUnit.WorkActionWriting .SlimeSprite {
+  animation-name: workWrite;
+}
+.SlimeUnit.WorkActionBuilding .SlimeSprite {
+  animation-name: workBuild;
+}
+.SlimeUnit.WorkActionSearching .SlimeSprite {
+  animation-name: workSearch;
+}
+.SlimeUnit.WorkActionPresenting .SlimeSprite {
+  animation-name: workPresent;
+}
+.SlimeUnit.WorkActionThinking .ActionProp {
+  background: #79e8ee;
+  animation: thoughtFloat 1.1s ease-in-out infinite;
+}
+.SlimeUnit.WorkActionDebugging .ActionProp,
+.SlimeUnit.WorkActionTesting .ActionProp {
+  background: #ff789d;
+  animation: warningBlink 0.45s steps(2) infinite;
+}
+.SlimeUnit.WorkActionPlanning .ActionProp,
+.SlimeUnit.WorkActionWriting .ActionProp {
+  background: #ffd166;
+}
+.SlimeUnit.WorkActionReviewing .ActionProp,
+.SlimeUnit.WorkActionSearching .ActionProp {
+  background: #c4a6ff;
+}
+.SlimeUnit.Working .WorkLabel {
+  transition: none;
+}
+
+@keyframes workTyping {
+  0%,
+  100% {
+    transform: translateY(0) scaleX(1);
+  }
+  33% {
+    transform: translateY(-3px) scaleX(1.04);
+  }
+  66% {
+    transform: translateY(1px) scaleX(0.98);
+  }
+}
+@keyframes workAnalyze {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0);
+  }
+  33% {
+    transform: translateX(-2px) rotate(-3deg);
+  }
+  66% {
+    transform: translateX(2px) rotate(3deg);
+  }
+}
+@keyframes workThink {
+  0%,
+  100% {
+    transform: translateY(0) scaleX(1);
+  }
+  50% {
+    transform: translateY(-5px) scaleX(0.97);
+  }
+}
+@keyframes workRead {
+  0%,
+  100% {
+    transform: translateY(1px) scaleX(1);
+  }
+  30%,
+  70% {
+    transform: translateY(-2px) scaleX(1.03);
+  }
+}
+@keyframes workDebug {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-2px, 1px);
+  }
+  50% {
+    transform: translate(2px, -1px);
+  }
+  75% {
+    transform: translate(-1px, -2px);
+  }
+}
+@keyframes workPlan {
+  0%,
+  100% {
+    transform: rotate(0) translateY(0);
+  }
+  30% {
+    transform: rotate(-4deg) translateY(-2px);
+  }
+  70% {
+    transform: rotate(3deg) translateY(1px);
+  }
+}
+@keyframes workTest {
+  0%,
+  100% {
+    transform: scale(1) translateY(0);
+  }
+  45% {
+    transform: scale(0.94, 1.04) translateY(2px);
+  }
+  60% {
+    transform: scale(1.06, 0.96) translateY(-3px);
+  }
+}
+@keyframes workReview {
+  0%,
+  100% {
+    transform: translateX(0) scaleX(1);
+  }
+  40% {
+    transform: translateX(2px) scaleX(1.04);
+  }
+  75% {
+    transform: translateX(-2px) scaleX(0.98);
+  }
+}
+@keyframes workWrite {
+  0%,
+  100% {
+    transform: translateY(0) scaleX(1);
+  }
+  25% {
+    transform: translateY(-2px) scaleX(1.02);
+  }
+  50% {
+    transform: translateY(2px) scaleX(0.98);
+  }
+  75% {
+    transform: translateY(-1px) scaleX(1.03);
+  }
+}
+@keyframes workBuild {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  35% {
+    transform: translateY(-3px) rotate(2deg);
+  }
+  70% {
+    transform: translateY(1px) rotate(-2deg);
+  }
+}
+@keyframes workSearch {
+  0%,
+  100% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(-3px) translateY(-1px);
+  }
+  50% {
+    transform: translateX(2px) translateY(-3px);
+  }
+  75% {
+    transform: translateX(3px) translateY(1px);
+  }
+}
+@keyframes workPresent {
+  0%,
+  100% {
+    transform: translateY(0) scaleX(1);
+  }
+  35% {
+    transform: translateY(-4px) scaleX(1.07);
+  }
+  70% {
+    transform: translateY(1px) scaleX(0.96);
+  }
+}
+@keyframes propPop {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(2deg);
+  }
+}
+@keyframes thoughtFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(5deg);
+  }
+}
+@keyframes warningBlink {
+  50% {
+    opacity: 0.55;
+    transform: scale(1.12);
+  }
+}
+
+/* Eating is a quiet, stationary break with a tiny food bowl and chewing loop. */
+.SlimeUnit.UsingEating:not(.Moving) .ActionProp {
+  position: absolute;
+  z-index: 4;
+  display: block;
+  left: 44px;
+  top: 50px;
+  width: 17px;
+  height: 8px;
+  border: 2px solid #332839;
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  background: #ffbd5c;
+  box-shadow: 1px 2px #16232a;
+  animation: bowlNibble 1.3s steps(2) infinite;
+}
+.SlimeUnit.UsingEating:not(.Moving) .ActionProp::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: -4px;
+  width: 8px;
+  height: 4px;
+  border: 1px solid #332839;
+  background: #d9f45a;
+}
+.SlimeUnit.UsingEating:not(.Moving) .ActionProp::after {
+  content: '·';
+  position: absolute;
+  right: -8px;
+  top: -11px;
+  color: #fff1d4;
+  font:
+    bold 14px 'Space Mono',
+    monospace;
+  animation: crumbBounce 0.7s steps(2) infinite;
+}
+.SlimeUnit.UsingEating:not(.Moving) .SlimeSprite {
+  animation: slimeChew 1.1s steps(3, end) infinite;
+}
+@keyframes slimeChew {
+  0%,
+  100% {
+    transform: translateY(0) scaleX(1);
+  }
+  33% {
+    transform: translateY(2px) scaleX(1.06) scaleY(0.97);
+  }
+  66% {
+    transform: translateY(-1px) scaleX(0.98) scaleY(1.02);
+  }
+}
+@keyframes bowlNibble {
+  50% {
+    transform: translateY(1px) scaleX(0.9);
+  }
+}
+@keyframes crumbBounce {
+  50% {
+    transform: translateY(-3px);
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .SlimeUnit.Working .SlimeSprite,
+  .SlimeUnit.Working .ActionProp,
+  .SlimeUnit.UsingEating .SlimeSprite,
+  .SlimeUnit.UsingEating .ActionProp {
+    animation: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .RoomAmbience *,
+  .RoomAmbience *::before,
+  .RoomAmbience *::after {
+    animation: none !important;
+  }
+  .BirdFlight {
+    display: none;
+  }
+  .CritterRabbit {
+    left: 39%;
+    top: 61%;
+    opacity: 0.8;
+  }
+  .CritterSquirrel {
+    right: 7%;
+    top: 34%;
+    opacity: 0.8;
+  }
+  .MoleSprite {
+    opacity: 0.9;
+    transform: none;
+  }
+}

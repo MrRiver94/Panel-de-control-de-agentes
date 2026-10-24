@@ -9,10 +9,29 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from app.main import ActivityIn, AgentState, ControlUpdate, configured_model_catalog
+from app.models import ActivityIn, AgentState, ControlUpdate
+from app.catalog import configured_model_catalog
+from app import state
+from app.repository import load_agent_registry
+from app.telemetry import sample_agent_usage
 
 
 class ModelControlsTests(unittest.TestCase):
+    def test_environment_requests_select_muse(self) -> None:
+        main = import_module("app.main")
+        original = {key: value.model_copy(deep=True) for key, value in state.agents.items()}
+        with TemporaryDirectory() as directory, patch.object(state, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
+            try:
+                with TestClient(main.app) as client:
+                    for prompt in ("Corrige las luces de la cueva", "Anima los árboles", "Prepara un spritesheet de agua"):
+                        with self.subTest(prompt=prompt):
+                            response = client.post("/api/dispatch", json={"prompt": prompt})
+                            self.assertEqual(response.status_code, 200)
+                            self.assertIn("muse", response.json()["agent_ids"])
+            finally:
+                state.agents.clear()
+                state.agents.update(original)
+
     def test_controls_accept_provider_model_and_budget(self) -> None:
         control = ControlUpdate(token_budget=4000, reasoning_effort="high", provider="anthropic", model="claude-sonnet-4-6")
         self.assertEqual((control.provider, control.model, control.token_budget), ("anthropic", "claude-sonnet-4-6", 4000))
@@ -29,8 +48,8 @@ class ModelControlsTests(unittest.TestCase):
 
     def test_control_selection_is_persisted(self) -> None:
         main = import_module("app.main")
-        original = main.agents["nexus"].model_copy(deep=True)
-        with TemporaryDirectory() as directory, patch.object(main, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
+        original = state.agents["nexus"].model_copy(deep=True)
+        with TemporaryDirectory() as directory, patch.object(state, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
             try:
                 with TestClient(main.app) as client:
                     response = client.post("/api/agents/nexus/controls", json={
@@ -39,21 +58,21 @@ class ModelControlsTests(unittest.TestCase):
                     })
                     self.assertEqual(response.status_code, 200)
                     self.assertEqual(response.json()["provider"], "anthropic")
-                    main.agents["nexus"].provider = "codex"
-                    main.load_agent_registry()
-                    self.assertEqual((main.agents["nexus"].provider, main.agents["nexus"].model), (
+                    state.agents["nexus"].provider = "codex"
+                    load_agent_registry()
+                    self.assertEqual((state.agents["nexus"].provider, state.agents["nexus"].model), (
                         "anthropic", "claude-sonnet-4-6"
                     ))
             finally:
-                main.agents["nexus"] = original
+                state.agents["nexus"] = original
 
     def test_usage_series_shows_measured_peak(self) -> None:
         main = import_module("app.main")
-        with TemporaryDirectory() as directory, patch.object(main, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
+        with TemporaryDirectory() as directory, patch.object(state, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
             with TestClient(main.app) as client:
                 first = datetime.now(timezone.utc) - timedelta(seconds=40)
-                main.sample_agent_usage(first, 100)
-                main.sample_agent_usage(first + timedelta(seconds=30), 220)
+                sample_agent_usage(first, 100)
+                sample_agent_usage(first + timedelta(seconds=30), 220)
                 response = client.get("/api/usage-series?minutes=60")
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json()["points"][-1]["tokens_per_minute"], 240)
@@ -64,8 +83,8 @@ class ModelControlsTests(unittest.TestCase):
 
     def test_runtime_state_is_persisted_and_audited(self) -> None:
         main = import_module("app.main")
-        original = main.agents["scout"].model_copy(deep=True)
-        with TemporaryDirectory() as directory, patch.object(main, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
+        original = state.agents["scout"].model_copy(deep=True)
+        with TemporaryDirectory() as directory, patch.object(state, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
             try:
                 with TestClient(main.app) as client:
                     response = client.post("/api/agents/scout/status", json={
@@ -75,13 +94,13 @@ class ModelControlsTests(unittest.TestCase):
                     self.assertEqual(response.json()["status"], "thinking")
                     events = client.get("/api/activity/history").json()
                     self.assertEqual(events[0]["kind"], "status_thinking")
-                    main.agents["scout"].status = "standby"
-                    main.load_agent_registry()
-                    self.assertEqual(main.agents["scout"].status, "thinking")
+                    state.agents["scout"].status = "standby"
+                    load_agent_registry()
+                    self.assertEqual(state.agents["scout"].status, "thinking")
                     invalid = client.post("/api/agents/scout/status", json={"status": "imaginary"})
                     self.assertEqual(invalid.status_code, 422)
             finally:
-                main.agents["scout"] = original
+                state.agents["scout"] = original
 
 
 

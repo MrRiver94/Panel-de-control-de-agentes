@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="32" viewBox="0 0 128 32" shape-rendering="crispEdges">
+  <defs><g id="water"><path fill="#64a8cb" d="M5 11h11v2H5zm14 8h8v2h-8z"/><path fill="#457fbb" d="M8 23h13v2H8z"/><path fill="#8fc7df" d="M18 9h5v1h-5z"/></g></defs>
+  <!-- 4 cells, identical colors and line lengths; ripple shifts 1px and returns. -->
+  <use href="#water"/>
+  <g transform="translate(33)"><use href="#water"/></g>
+  <g transform="translate(64)"><use href="#water"/></g>
+  <g transform="translate(95)"><use href="#water"/></g>
+</svg>

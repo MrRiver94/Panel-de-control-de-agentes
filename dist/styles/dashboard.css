@@ -1,0 +1,539 @@
+/* Expanded illustrated room, digital time panel and animated slime sprite system. */
+.TopControls {
+  grid-template-columns: 1.1fr 0.88fr 1.08fr 0.78fr;
+}
+.CodexUsagePanel {
+  min-height: 164px;
+}
+.CodexUsagePanel .PanelTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.CodexUsagePanel button {
+  border: 0;
+  color: #14252a;
+  background: #7ee2e8;
+  cursor: pointer;
+  font:
+    16px 'Space Mono',
+    monospace;
+  line-height: 18px;
+}
+.CapacityGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.CapacityGrid div {
+  padding: 8px;
+  border: 2px solid #3f676a;
+  background: #0c1b22;
+}
+.CapacityGrid span,
+.CapacityGrid small {
+  display: block;
+  color: #9ab9b4;
+  font-size: 7px;
+}
+.CapacityGrid b {
+  display: block;
+  margin: 5px 0;
+  color: #d9f45a;
+  font:
+    16px 'Press Start 2P',
+    monospace;
+}
+.CodexFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+.CodexFacts span {
+  padding: 3px 4px;
+  color: #b9d9d6;
+  border: 1px solid #3f676a;
+  font-size: 7px;
+}
+.CodexSource {
+  display: block;
+  margin-top: 7px;
+  color: #7ee2e8;
+  font-size: 8px;
+}
+.MetricsPanel,
+.CodexUsagePanel {
+  display: flex;
+  flex-direction: column;
+}
+.UsagePlot {
+  margin-top: auto;
+  padding-top: 13px;
+  border-top: 1px solid #456861;
+}
+.UsagePlotTitle,
+.UsagePlotAxis {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.UsagePlotTitle b {
+  color: #e8f0d6;
+  font:
+    7px 'Press Start 2P',
+    monospace;
+  line-height: 1.5;
+}
+.UsagePlotTitle span {
+  color: #ffbd80;
+  font:
+    8px 'Space Mono',
+    monospace;
+  white-space: nowrap;
+}
+.UsagePlotCanvas {
+  height: 142px;
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid #496b66;
+  background: linear-gradient(180deg, #0d2428, #102027);
+}
+.UsagePlotCanvas svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.UsageChartEmpty {
+  display: grid;
+  height: 100%;
+  place-items: center;
+  padding: 12px;
+  color: #83aaa5;
+  font-size: 9px;
+  text-align: center;
+}
+.UsagePlotCanvas .ChartGrid {
+  stroke: #507670;
+  stroke-opacity: 0.35;
+  stroke-dasharray: 3 5;
+}
+.UsagePlotCanvas .ChartLine {
+  stroke: #7ee2e8;
+  stroke-width: 2.5;
+  fill: none;
+  stroke-linejoin: round;
+}
+.UsagePlotCanvas .ChartPoint {
+  fill: #d9f45a;
+  stroke: #0e252a;
+  stroke-width: 2;
+}
+.UsagePlotCanvas .ChartPeak {
+  fill: #ffbd80;
+}
+.UsagePlotCanvas .ChartBar {
+  fill: #68c9c9;
+}
+.UsagePlotCanvas .ChartBarPeak {
+  fill: #ffbd80;
+}
+.UsagePlotCanvas text {
+  fill: #a8c8bf;
+  font:
+    8px 'Space Mono',
+    monospace;
+}
+.UsagePlotAxis {
+  margin-top: 5px;
+  color: #8db2a8;
+  font:
+    7px 'Space Mono',
+    monospace;
+}
+.UsagePlotNote {
+  display: block;
+  min-height: 13px;
+  margin-top: 7px;
+  color: #9cc2b8;
+  font-size: 8px;
+  line-height: 1.35;
+}
+.ModelFields {
+  grid-template-columns: 1fr;
+  margin-top: 9px;
+}
+.ModelFields select {
+  text-overflow: ellipsis;
+}
+.ModelHint,
+.ControlFeedback {
+  display: block;
+  margin-top: 7px;
+  color: #9dc7c1;
+  font-size: 8px;
+  line-height: 1.5;
+}
+.ControlFeedback {
+  min-height: 12px;
+  color: #d9f45a;
+}
+
+.SlimeRoom {
+  min-height: clamp(440px, 63vh, 720px);
+  background: #101923;
+}
+
+.RoomHeader {
+  background: #101b25dd;
+  border-color: #bd8c62;
+}
+.MissionPopup {
+  right: 2.5%;
+  bottom: 4%;
+  width: min(360px, calc(100% - 30px));
+  background: #101923ee;
+  border-color: #b98763;
+  box-shadow: 6px 6px 0 #090d13;
+}
+
+.DigitalClock {
+  position: absolute;
+  z-index: 7;
+  top: 18px;
+  right: 22px;
+  display: grid;
+  gap: 4px;
+  min-width: 226px;
+  padding: 10px 12px;
+  border: 3px solid #78c9cd;
+  background: #07131be8;
+  box-shadow: 5px 5px 0 #12101c;
+  color: #e9fff6;
+}
+.ClockCaption {
+  color: #7ee2e8;
+  font:
+    7px 'Press Start 2P',
+    monospace;
+  letter-spacing: 1px;
+}
+.DigitalClock strong {
+  color: #d9f45a;
+  font:
+    23px/1 'Space Mono',
+    monospace;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px #194340;
+}
+.ClockDate {
+  color: #d9e7d8;
+  font:
+    8px 'Press Start 2P',
+    monospace;
+  white-space: nowrap;
+}
+.LivePulse {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 7px;
+  background: #d9f45a;
+  box-shadow: 0 0 8px #d9f45a;
+  animation: telemetryPulse 1s steps(2) infinite;
+}
+.TelemetryStamp {
+  display: block;
+  margin-top: 8px;
+  color: #7ee2e8;
+  font-size: 8px;
+}
+
+.SlimeUnit {
+  z-index: 5;
+  width: 64px;
+  filter: drop-shadow(2px 3px 0 #1a1319);
+  transition: none;
+}
+.SlimeUnit::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: 8px;
+  bottom: 13px;
+  width: 45px;
+  height: 9px;
+  border-radius: 50%;
+  background: #17203585;
+  filter: blur(1px);
+  transform: skewX(-18deg);
+  transition:
+    width 0.35s ease,
+    opacity 0.35s ease;
+}
+.SlimeUnit.Working::before {
+  width: 51px;
+  opacity: 0.82;
+}
+.SlimeUnit strong {
+  position: relative;
+  z-index: 2;
+  width: max-content;
+  max-width: 74px;
+  margin: -7px auto 0;
+  border: 1px solid #a37a5a;
+  background: #101923e9;
+  font-size: 6px;
+}
+.SlimeBody,
+.Laptop {
+  display: none !important;
+}
+.SlimeSprite {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 58px;
+  height: 72px;
+  margin: auto;
+  background: url('../assets/slime-mini-sprite-sheet-v2.png') 0 0 / 400% 100% no-repeat;
+  filter: hue-rotate(var(--hue)) saturate(1.04);
+  image-rendering: pixelated;
+}
+.SlimeUnit.Resting .SlimeSprite {
+  animation: slimeIdle 2.1s steps(2) infinite;
+}
+.SlimeUnit.Resting.Sleep .SlimeSprite {
+  background-position: 100% 0;
+  animation: slimeSleep 2.5s steps(2) infinite;
+}
+.SlimeUnit.Working .SlimeSprite {
+  background-position: 66.666% 0;
+  animation: slimeWork 1s steps(2) infinite;
+}
+.SlimeUnit.Working {
+  animation: agentArrival 0.7s steps(3) 2;
+}
+.SlimeUnit.Commuting .SlimeSprite {
+  background-position: 33.333% 0;
+  animation: commuteWalk 0.34s steps(2) infinite;
+}
+.SlimeUnit.Commuting .WorkLabel {
+  display: block;
+  border-color: #d9a65a;
+  background: #fff0c7;
+  animation: labelPulse 1s steps(2) infinite;
+}
+.SlimeUnit.UsingCoffee .WorkLabel,
+.SlimeUnit.UsingEating .WorkLabel {
+  display: block;
+  border-color: #d9a65a;
+  background: #fff0c7;
+}
+.SlimeUnit.Commuting.Coffee .IdleProp {
+  display: block;
+  position: absolute;
+  z-index: 3;
+  left: 43px;
+  top: 42px;
+  width: 10px;
+  height: 9px;
+  border: 1px solid #2c2837;
+  background: #fff1d4;
+  animation: putCupDown 0.65s steps(3) forwards;
+}
+.SlimeUnit.Commuting.Coffee .IdleProp::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: 1px;
+  width: 3px;
+  height: 4px;
+  border: 1px solid #2c2837;
+}
+.SlimeUnit.Commuting.Eating .IdleProp {
+  display: block;
+  position: absolute;
+  z-index: 3;
+  left: 43px;
+  top: 43px;
+  width: 10px;
+  height: 8px;
+  border: 1px solid #2c2837;
+  border-radius: 50%;
+  background: #ffbd5c;
+  animation: putCupDown 0.65s steps(3) forwards;
+}
+.SlimeUnit.Moving .SlimeSprite {
+  background-position: 33.333% 0;
+  animation: slimeWalk 0.35s steps(2) infinite;
+}
+.SlimeUnit.Moving strong {
+  animation: nameWalk 0.35s steps(2) infinite;
+}
+
+.SlimeUnit.Coffee .IdleProp,
+.SlimeUnit.Eating .IdleProp {
+  position: absolute;
+  display: block;
+  z-index: 4;
+  left: 42px;
+  top: 42px;
+  width: 10px;
+  height: 9px;
+  border: 1px solid #2c2837;
+  background: #fff1d4;
+  box-shadow: 1px 1px 0 #2c2837;
+}
+.SlimeUnit.Coffee .IdleProp::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: 1px;
+  width: 3px;
+  height: 4px;
+  border: 1px solid #2c2837;
+}
+.SlimeUnit.Eating .IdleProp {
+  border-radius: 50%;
+  background: #ffbd5c;
+}
+.SlimeUnit.Resting.Sleep .IdleProp::after {
+  content: 'z';
+  position: absolute;
+  left: 12px;
+  top: -16px;
+  width: 18px;
+  color: #d7f8ff;
+  font:
+    bold 9px 'Space Mono',
+    monospace;
+  text-shadow: 1px 1px #1a2230;
+}
+.WorkLabel {
+  z-index: 6;
+  left: 41px;
+  top: -8px;
+  padding: 3px;
+  border-color: #235d63;
+  background: #eaffef;
+  color: #15252c;
+  font-size: 5px;
+  box-shadow: 1px 1px #18373d;
+}
+.SlimeUnit.Working .WorkLabel {
+  animation: labelPulse 1.2s steps(2) infinite;
+}
+
+@keyframes slimeIdle {
+  0%,
+  100% {
+    transform: translateY(0) scaleX(1);
+  }
+  50% {
+    transform: translateY(3px) scaleX(1.045);
+  }
+}
+@keyframes slimeSleep {
+  50% {
+    transform: translateY(2px) scaleX(1.02);
+  }
+}
+@keyframes slimeWork {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes agentArrival {
+  50% {
+    transform: translateX(8px) translateY(-4px);
+  }
+}
+@keyframes labelPulse {
+  50% {
+    transform: translateY(-2px);
+  }
+}
+@keyframes telemetryPulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+@keyframes slimeWalk {
+  50% {
+    transform: translateY(-7px) rotate(-2deg);
+  }
+}
+@keyframes nameWalk {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes commuteWalk {
+  50% {
+    transform: translateY(-6px) rotate(-2deg);
+  }
+}
+@keyframes putCupDown {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-16px, 14px);
+  }
+}
+
+@media (max-width: 900px) {
+  .TopControls {
+    grid-template-columns: 1fr 1fr;
+  }
+  .CodexUsagePanel,
+  .ActivityPanel {
+    grid-column: span 1;
+  }
+  .SlimeRoom {
+    min-height: 560px;
+    background-position: center;
+  }
+  .DigitalClock {
+    top: 62px;
+    right: 14px;
+    transform: scale(0.85);
+    transform-origin: top right;
+  }
+}
+@media (max-width: 600px) {
+  .TopControls {
+    grid-template-columns: 1fr;
+  }
+  .CodexUsagePanel,
+  .ActivityPanel {
+    grid-column: auto;
+  }
+  .SlimeRoom {
+    min-height: 620px;
+  }
+  .DigitalClock {
+    top: 57px;
+    right: 6px;
+    transform: scale(0.68);
+    transform-origin: top right;
+  }
+  .SlimeUnit {
+    transform: scale(0.76);
+    transform-origin: top left;
+  }
+  .MissionPopup {
+    bottom: 10px;
+  }
+  .SlimeUnit.Working {
+    animation: none;
+  }
+}

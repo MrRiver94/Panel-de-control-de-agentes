@@ -1,0 +1,158 @@
+/* Access management and agent registration stay in compact popup panels. */
+.HeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.HeaderActions > button {
+  padding: 7px 9px;
+  border: 2px solid #74a59d;
+  color: #d9f45a;
+  background: #14282e;
+  cursor: pointer;
+  font:
+    7px 'Press Start 2P',
+    monospace;
+}
+.AccessDialog {
+  width: min(650px, calc(100vw - 28px));
+  max-height: min(760px, calc(100vh - 28px));
+  padding: 0;
+  overflow: auto;
+  border: 4px solid #6f9a8c;
+  color: #fff1d4;
+  background: #101b25;
+  box-shadow: 8px 8px 0 #070d12;
+}
+.AccessDialog::backdrop {
+  background: #071017c9;
+  backdrop-filter: blur(3px);
+}
+.AccessBody {
+  display: grid;
+  gap: 11px;
+  padding: 16px;
+}
+.AccessBody label {
+  display: block;
+  color: #c7dad0;
+  font-size: 9px;
+}
+.AccessBody input,
+.AccessBody select {
+  width: 100%;
+  min-height: 34px;
+  margin-top: 6px;
+  padding: 7px;
+  border: 2px solid #607f78;
+  color: #fff1d4;
+  background: #102027;
+  font:
+    11px 'Space Mono',
+    monospace;
+}
+.AccessBody input[type='color'] {
+  padding: 3px;
+  cursor: pointer;
+}
+.AccessBody fieldset {
+  margin: 0;
+  padding: 10px;
+  border: 2px solid #546f6a;
+}
+.AccessBody legend,
+.AccessActions h3 {
+  padding: 0 4px;
+  color: #d9f45a;
+  font:
+    8px 'Press Start 2P',
+    monospace;
+}
+.AccessGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+}
+.AccessTree {
+  display: grid;
+  gap: 7px;
+  max-height: 185px;
+  overflow: auto;
+  padding: 8px;
+  border: 2px solid #405e59;
+  background: #0c191d;
+}
+.AccessTree section {
+  padding: 8px;
+  border-left: 3px solid #7ee2e8;
+  background: #15262a;
+}
+.AccessTree b {
+  display: block;
+  color: #fff1d4;
+  font:
+    8px 'Press Start 2P',
+    monospace;
+}
+.AccessTree small,
+.AccessTree p {
+  display: block;
+  margin: 6px 0 0;
+  color: #a8c9c1;
+  font-size: 9px;
+}
+.AccessActions {
+  display: grid;
+  gap: 6px;
+  margin: 0 16px 16px;
+  padding: 11px;
+  border: 2px solid #48665e;
+  background: #132328;
+}
+.AccessActions .PrimaryButton {
+  margin: 0 0 5px;
+}
+.AccessActions h3 {
+  margin: 5px 0;
+}
+.AccessRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  border-top: 1px solid #ffffff1c;
+  color: #cde4d9;
+  font-size: 9px;
+}
+.AccessRow span {
+  margin-right: auto;
+}
+.AccessRow button {
+  padding: 5px 6px;
+  border: 1px solid #71998e;
+  color: #d6f2e8;
+  background: #1a373b;
+  cursor: pointer;
+  font:
+    7px 'Press Start 2P',
+    monospace;
+}
+.AccessRow button[data-role-delete],
+.AccessRow button[data-user-delete] {
+  border-color: #bf7183;
+  color: #ffd4dc;
+  background: #3b2530;
+}
+.AccessRow small {
+  color: #ffcc7c;
+  font-size: 8px;
+}
+@media (max-width: 520px) {
+  .AccessGrid {
+    grid-template-columns: 1fr;
+  }
+  .AccessDialog {
+    width: calc(100vw - 18px);
+  }
+}

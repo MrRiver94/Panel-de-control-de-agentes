@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 import json
 import os
-from pathlib import Path
 import re
 import time
-from typing import Any
 
 MAX_SESSIONS = 40
 TAIL_BYTES = 2_000_000

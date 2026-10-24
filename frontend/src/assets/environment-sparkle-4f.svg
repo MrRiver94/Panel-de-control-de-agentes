@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="32" viewBox="0 0 128 32" shape-rendering="crispEdges">
+  <defs><g id="core"><path fill="#b5f3ff" d="M15 14h2v4h-2zM14 15h4v2h-4z"/><path fill="#64c8e6" d="M8 8h2v2H8zm15 14h2v2h-2z"/></g></defs>
+  <!-- Fixed core/halo, only the tiny ray length varies by one design pixel. -->
+  <g><use href="#core"/><path fill="#b5f3ff" d="M15 12h2v2h-2zM15 18h2v2h-2zM12 15h2v2h-2zM18 15h2v2h-2z"/></g>
+  <g transform="translate(32)"><use href="#core"/><path fill="#b5f3ff" d="M15 11h2v3h-2zM15 18h2v3h-2zM11 15h3v2h-3zM18 15h3v2h-3z"/></g>
+  <g transform="translate(64)"><use href="#core"/><path fill="#b5f3ff" d="M15 12h2v2h-2zM15 18h2v2h-2zM12 15h2v2h-2zM18 15h2v2h-2z"/></g>
+  <g transform="translate(96)"><use href="#core"/><path fill="#b5f3ff" d="M15 13h2v1h-2zM15 18h2v1h-2zM13 15h1v2h-1zM18 15h1v2h-1z"/></g>
+</svg>

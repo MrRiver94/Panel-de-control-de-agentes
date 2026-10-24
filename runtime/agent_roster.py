@@ -2,7 +2,19 @@
 
 No guarda claves ni se publica como parte del panel estático.
 """
+from pathlib import Path
+
 from agents import Agent, Runner
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def muse_instructions() -> str:
+    """Read the versioned design contract and reviewed lessons on each execution."""
+    return "\n\n".join(
+        (PROJECT_ROOT / path).read_text(encoding="utf-8")
+        for path in ("agents/muse.md", "agents/muse-lessons.md")
+    )
 
 scout = Agent(
     name="SCOUT",
@@ -18,10 +30,7 @@ sentinel = Agent(
 )
 muse = Agent(
     name="MUSE",
-    instructions=(
-        "Eres el director de arte. Define una dirección visual concreta, respeta el lenguaje "
-        "pixel art isométrico de SlimeOps y entrega criterios de aceptación para FORGE."
-    ),
+    instructions=lambda context, agent: muse_instructions(),
 )
 nexus = Agent(
     name="NEXUS",

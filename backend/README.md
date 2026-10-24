@@ -33,3 +33,15 @@ El frontend se conecta por defecto a `http://127.0.0.1:8000`.
 La auditoría registra asignaciones de misiones, cambios de límites/esfuerzo y actividades enviadas a `POST /api/activity`, con tokens de entrada, salida y razonamiento separados.
 
 Consulta `../docs/TECHNICAL_GUIDE.md` para la arquitectura completa, las tablas SQLite y la guía de integración.
+
+## Organización y pruebas
+
+`app/main.py` conecta FastAPI con los routers de `app/routes/`. Los contratos están en `app/models.py`; SQLite, en `app/repository.py`; el estado compartido, en `app/state.py`. Los servicios de catálogo, permisos, telemetría y Codex tienen módulos independientes.
+
+El comando de arranque `./start.ps1` y las rutas de la API se mantienen. Para ejecutar las regresiones desde `backend`:
+
+```powershell
+.venv/Scripts/python.exe -m unittest discover -s tests
+```
+
+Las pruebas usan bases temporales y no modifican los datos locales del panel. Consulta [el mapa del código](../docs/CODE_STRUCTURE.md) para localizar cada responsabilidad.

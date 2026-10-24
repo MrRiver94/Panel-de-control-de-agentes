@@ -1,5 +1,37 @@
 # Registro de cambios
 
+## 2026-10-23 — Organización del código sin cambios funcionales
+
+- Dividido el frontend en módulos ES de sala, controles, sesiones, actividad, conexión y composición de vistas. Conservadas las claves y los intervalos existentes.
+- Separados los estilos en bloques importados en el orden de cascada anterior y aplicado formato común al código.
+- API organizada en contratos, repositorio SQLite, estado, permisos, servicios y cinco routers; se mantiene el contrato HTTP.
+- Cliente HTTP compartido por las sesiones y los demás paneles; reutilizado el formateador numérico y actualizado solo el transform de cámara al explorar.
+- Compilación sin borrado completo de `dist/`, con reemplazo de archivos y versión al final; se publican solo los diez recursos usados por la interfaz.
+- Añadidos comandos de pruebas y formato y documentada la estructura en `CODE_STRUCTURE.md`.
+
+## 2026-10-23 — Marco botánico y aves articuladas
+
+- Retirados los grupos de follaje verde superpuestos y las hojas flotantes que resultaban molestos.
+- Añadido un marco estático de madera, hiedra, helechos y flores alrededor de la imagen, separado de la cámara y de los agentes.
+- Sustituidas las siluetas de pájaros por sprites de petirrojo, gorrión y golondrina, con cuatro dibujos de alas por especie a 160–180 ms.
+- Incorporados planeo, trayectorias en ambos sentidos y pausas entre apariciones para reducir el movimiento continuo del escenario.
+
+## 2026-10-23 — Proporciones y cámara de la sala
+
+- El mapa se encuadra con su proporción original de 1672 × 941, independiente de la altura de las tarjetas laterales.
+- Reloj, estado, cámara y formulario quedan fuera del mundo transformado, manteniendo su tamaño y visibilidad al explorar.
+- Corregido el sentido de las cuatro flechas: desplazan la vista hacia su dirección.
+- Zoom de 1× a 2,4× y desplazamiento limitado al área ampliada para evitar huecos fuera del mapa. «Ver todo» restablece el encuadre completo.
+- Añadidas regresiones de sentido de las flechas, límites de cámara y restablecimiento del zoom.
+
+## 2026-10-23 — Contrato de animación MUSE e iluminación estable
+
+- Incorporadas las reglas del usuario al perfil MUSE: 2 o 4 cuadros, máximo 8 justificados, hojas de cuatro columnas y exposición de 100–200 ms.
+- El runtime opcional consume el perfil y la memoria de correcciones desde archivos versionados; no implica ejecución real ni entrenamiento automático desde el panel.
+- Ampliado el enrutamiento de MUSE para peticiones de iluminación, paisaje, vegetación y sprites.
+- Retirada la alternancia de fondos completos que producía cambios de luz; conservado el mapa estable con hojas locales de follaje, ondas y destellos de cuatro cuadros.
+- Documentadas las duraciones y microcambios en `docs/SCENERY_ANIMATION.md`.
+
 ## 2026-10-23 — Muebles e interacciones en la sala de descanso
 
 - Añadidos un armario, un sillón, una mesa para comer y una cama a escala slime en el espacio común central.

@@ -1,0 +1,939 @@
+/* Larger type hierarchy: pixel style retained, operational data becomes readable. */
+.PanelTitle {
+  font-size: 11px;
+  line-height: 1.35;
+}
+.ControlFields label,
+.MetricGrid span,
+.CapacityGrid span,
+.CapacityGrid small {
+  font-size: 9px;
+}
+.ControlFields select,
+.ControlFields input {
+  font-size: 12px;
+}
+.EffortButton,
+.PrimaryButton {
+  font-size: 9px;
+}
+.MetricGrid b {
+  font-size: 11px;
+}
+.MetricFoot,
+.ActivityItem {
+  font-size: 10px;
+}
+.CapacityGrid b {
+  font-size: 17px;
+}
+.CodexFacts span,
+.CodexSource,
+.TelemetryStamp {
+  font-size: 9px;
+}
+.AgentWatchTop {
+  font-size: 8px;
+}
+.AgentWatchTop em,
+.AgentWatchBottom,
+.AgentDetailPopover small {
+  font-size: 8px;
+}
+.AgentWatchRole {
+  line-height: 1.35;
+}
+.AgentInfoButton {
+  font-size: 7px;
+  padding: 7px;
+}
+.AgentDetailPopover p {
+  font-size: 10px;
+}
+.SlimeUnit strong {
+  font-size: 7px;
+  padding: 3px;
+}
+.WorkLabel {
+  font-size: 6px;
+}
+.RoomCameraControls span {
+  font-size: 7px;
+}
+
+/* Wide console frame and bounded camera for the live room. */
+.RoomSimulationBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 8px 0 10px;
+}
+.RoomSimulationBar button {
+  padding: 9px 12px;
+  border: 2px solid #d9f45a;
+  color: #17272a;
+  background: #d9f45a;
+  cursor: pointer;
+  font:
+    8px 'Press Start 2P',
+    monospace;
+}
+.RoomSimulationBar button:hover,
+.RoomSimulationBar button:focus-visible {
+  background: #fff1d4;
+  outline: 2px solid #fff1d4;
+  outline-offset: 2px;
+}
+.RoomSimulationBar button.IsRunning {
+  border-color: #79e8ee;
+  color: #d8f6ed;
+  background: #183239;
+}
+.RoomSimulationBar small {
+  color: #b8cab8;
+  font-size: 9px;
+}
+.AgentStateBeacon {
+  display: none;
+  position: absolute;
+  z-index: 4;
+}
+.SlimeUnit.StatusThinking .AgentStateBeacon {
+  display: block;
+  top: 8px;
+  right: -1px;
+  width: 19px;
+  height: 15px;
+  border: 3px solid #294051;
+  background: #79e8ee;
+  box-shadow:
+    0 4px #4e7892,
+    0 0 10px #79e8ee;
+  animation: stateBlink 0.55s steps(2) infinite;
+}
+.SlimeUnit.StatusError .AgentStateBeacon,
+.SlimeUnit.StatusPaused .AgentStateBeacon,
+.SlimeUnit.StatusBlocked .AgentStateBeacon {
+  display: grid;
+  top: -17px;
+  right: 0;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  border: 2px solid #302638;
+  color: #fff1d4;
+  font:
+    bold 14px/1 'Space Mono',
+    monospace;
+}
+.SlimeUnit.StatusError .AgentStateBeacon {
+  background: #d84d5f;
+  box-shadow: 0 0 10px #d84d5f;
+  animation: stateBlink 0.65s steps(2) infinite;
+}
+.SlimeUnit.StatusError .AgentStateBeacon::after {
+  content: '!';
+}
+.SlimeUnit.StatusPaused .AgentStateBeacon {
+  background: #ad8650;
+}
+.SlimeUnit.StatusPaused .AgentStateBeacon::after {
+  content: 'Ⅱ';
+}
+.SlimeUnit.StatusBlocked .AgentStateBeacon {
+  color: #10252c;
+  background: #79e8ee;
+}
+.SlimeUnit.StatusBlocked .AgentStateBeacon::after {
+  content: '↻';
+}
+.AgentWatchCard.StatusThinking .MiniDesk::before {
+  animation: stateBlink 0.55s steps(2) infinite;
+}
+.AgentWatchCard.StatusError .MiniDesk::before,
+.AgentWatchCard.StatusError .AgentSignal {
+  background: #d84d5f;
+  box-shadow: 0 0 11px #d84d5f;
+}
+.AgentWatchCard.StatusPaused .AgentSignal {
+  background: #ad8650;
+  animation: none;
+}
+.AgentWatchCard.StatusBlocked .AgentSignal {
+  background: #79e8ee;
+}
+@keyframes stateBlink {
+  50% {
+    opacity: 0.28;
+  }
+}
+.TerminalDrawer {
+  margin-top: 12px;
+  border: 2px solid #4d7771;
+  background: #081319;
+}
+.TerminalDrawer summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  cursor: pointer;
+  list-style: none;
+  color: #d9f45a;
+  font:
+    8px 'Press Start 2P',
+    monospace;
+}
+.TerminalDrawer summary::-webkit-details-marker {
+  display: none;
+}
+.TerminalDrawer summary:focus-visible {
+  outline: 2px solid #79e8ee;
+  outline-offset: -4px;
+}
+.TerminalDrawer summary small {
+  margin-left: auto;
+  color: #79e8ee;
+  font:
+    9px 'Space Mono',
+    monospace;
+}
+.TerminalChevron {
+  font:
+    18px 'Space Mono',
+    monospace;
+  transition: transform 0.2s;
+}
+.TerminalDrawer[open] .TerminalChevron {
+  transform: rotate(180deg);
+}
+.TerminalBody {
+  padding: 0 13px 13px;
+  border-top: 1px solid #31534f;
+}
+.TerminalBody p {
+  color: #96bbb0;
+  font-size: 9px;
+}
+.TerminalFeed {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 7px 9px;
+  background: #040c11;
+  font:
+    10px/1.6 'Space Mono',
+    monospace;
+}
+.TerminalLine {
+  padding: 3px 0;
+  border-bottom: 1px solid #24423a;
+  color: #b6e7c2;
+  overflow-wrap: anywhere;
+}
+.TerminalLine.IsError {
+  color: #ff8997;
+}
+@media (prefers-reduced-motion: reduce) {
+  .AgentStateBeacon,
+  .AgentWatchCard.StatusThinking .MiniDesk::before {
+    animation: none !important;
+  }
+}
+.AppShell {
+  max-width: none;
+  width: 100%;
+  padding: 16px clamp(16px, 1.7vw, 34px) 26px;
+}
+.SlimeRoom {
+  background: #101923;
+}
+.RoomWorld {
+  --room-zoom: 1;
+  --room-pan-x: 0%;
+  --room-pan-y: 0%;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #315842 url('../assets/slime-habitat-map-v3.png') center / cover no-repeat;
+  transform: translate(var(--room-pan-x), var(--room-pan-y)) scale(var(--room-zoom));
+  transform-origin: center;
+  transition: transform 0.36s cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+.RoomWorld::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, #0b142445 0 31%, transparent 39%),
+    linear-gradient(180deg, #09141918, transparent 28% 78%, #09141920);
+}
+.RoomAmbience {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+/* Four articulated drawings per species; movement and gliding are separate from the wing cycle. */
+.BirdFlight {
+  --bird-row: 16.710183%;
+  --bird-beat: 0.64s;
+  --bird-glide-cycle: 6.4s;
+  position: absolute;
+  left: -12%;
+  top: 24%;
+  width: clamp(42px, 6%, 62px);
+  aspect-ratio: 362 / 320;
+  opacity: 0;
+  animation: robinFlight 34s linear infinite;
+}
+.BirdSprite,
+.BirdGlide {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background-image: url('../assets/forest-birds-flight-v1.png');
+  background-size: 400% 339.375%;
+  background-position: 0 var(--bird-row);
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+.BirdSprite {
+  animation:
+    birdFrames var(--bird-beat) steps(1, end) infinite,
+    birdFlapVisibility var(--bird-glide-cycle) steps(1, end) infinite;
+}
+.BirdGlide {
+  background-position-x: 33.333333%;
+  opacity: 0;
+  animation: birdGlideVisibility var(--bird-glide-cycle) steps(1, end) infinite;
+}
+.BirdFlightOne {
+  animation-delay: -8s;
+}
+.BirdFlightTwo {
+  --bird-row: 58.746736%;
+  --bird-glide-cycle: 8s;
+  animation: sparrowFlight 40s linear -21s infinite;
+}
+.BirdFlightTwo .BirdSprite,
+.BirdFlightTwo .BirdGlide {
+  transform: scaleX(-1);
+}
+.BirdFlightThree {
+  --bird-row: 100%;
+  --bird-beat: 0.72s;
+  --bird-glide-cycle: 7.2s;
+  width: clamp(46px, 6.4%, 68px);
+  animation: swallowFlight 46s linear -31s infinite;
+}
+@keyframes birdFrames {
+  0%,
+  100% {
+    background-position-x: 0;
+  }
+  25% {
+    background-position-x: 33.333333%;
+  }
+  50% {
+    background-position-x: 66.666667%;
+  }
+  75% {
+    background-position-x: 100%;
+  }
+}
+@keyframes birdFlapVisibility {
+  0%,
+  65% {
+    opacity: 1;
+  }
+  66%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes birdGlideVisibility {
+  0%,
+  65% {
+    opacity: 0;
+  }
+  66%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes robinFlight {
+  0% {
+    left: -12%;
+    top: 26%;
+    opacity: 0;
+  }
+  2% {
+    left: -6%;
+    top: 25%;
+    opacity: 1;
+  }
+  17% {
+    left: 50%;
+    top: 21%;
+    opacity: 1;
+  }
+  32% {
+    left: 110%;
+    top: 24%;
+    opacity: 1;
+  }
+  33%,
+  100% {
+    left: 112%;
+    top: 24%;
+    opacity: 0;
+  }
+}
+@keyframes sparrowFlight {
+  0% {
+    left: 112%;
+    top: 38%;
+    opacity: 0;
+  }
+  2% {
+    left: 106%;
+    top: 37%;
+    opacity: 1;
+  }
+  18% {
+    left: 50%;
+    top: 33%;
+    opacity: 1;
+  }
+  36% {
+    left: -12%;
+    top: 36%;
+    opacity: 1;
+  }
+  37%,
+  100% {
+    left: -14%;
+    top: 36%;
+    opacity: 0;
+  }
+}
+@keyframes swallowFlight {
+  0% {
+    left: -12%;
+    top: 12%;
+    opacity: 0;
+  }
+  2% {
+    left: -5%;
+    top: 12%;
+    opacity: 1;
+  }
+  13% {
+    left: 50%;
+    top: 17%;
+    opacity: 1;
+  }
+  26% {
+    left: 110%;
+    top: 10%;
+    opacity: 1;
+  }
+  27%,
+  100% {
+    left: 112%;
+    top: 10%;
+    opacity: 0;
+  }
+}
+.CrystalAura {
+  position: absolute;
+  width: 8%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #8eeaff30 0 5%,
+    #6cc8ff18 19%,
+    #3d9cfa0a 43%,
+    transparent 72%
+  );
+}
+.CrystalAura::after {
+  content: '';
+  position: absolute;
+  inset: 25%;
+  background: url('../assets/environment-sparkle-4f.svg') 0 0 / 400% 100% no-repeat;
+  image-rendering: pixelated;
+  animation: environmentFrames 0.72s steps(1, end) infinite;
+}
+.CrystalAuraOne {
+  left: 25%;
+  top: 33%;
+  animation-delay: -1.1s;
+}
+.CrystalAuraTwo {
+  left: 27%;
+  top: 45%;
+  width: 7%;
+  animation-delay: -2.7s;
+}
+.CrystalAuraThree {
+  left: 2%;
+  top: 42%;
+  width: 6%;
+  animation-delay: -0.4s;
+}
+.PondRipple {
+  position: absolute;
+  width: 5%;
+  height: 5%;
+  background: url('../assets/environment-water-4f.svg') 0 0 / 400% 100% no-repeat;
+  image-rendering: pixelated;
+  animation: environmentFrames 0.6s steps(1, end) infinite;
+}
+.PondRippleOne {
+  right: 1%;
+  top: 4%;
+}
+.PondRippleTwo {
+  left: 0;
+  bottom: 1%;
+  animation-delay: -0.3s;
+}
+@keyframes environmentFrames {
+  0% {
+    background-position: 0 0;
+  }
+  25% {
+    background-position: 33.333333% 0;
+  }
+  50% {
+    background-position: 66.666667% 0;
+  }
+  75% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+.ForestCritter,
+.MoleSpot,
+.PondFish {
+  position: absolute;
+  image-rendering: pixelated;
+}
+.ForestCritter {
+  width: 3.2%;
+  min-width: 25px;
+  aspect-ratio: 6/5;
+  opacity: 0;
+}
+.ForestCritter svg,
+.PondFish svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+.CritterRabbit {
+  left: 39%;
+  top: 61%;
+  animation: rabbitPeek 26s steps(14, end) infinite;
+  animation-delay: -8s;
+}
+.CritterSquirrel {
+  right: 7%;
+  top: 34%;
+  width: 2.7%;
+  animation: squirrelPeek 31s steps(16, end) infinite;
+  animation-delay: -19s;
+}
+.MoleSpot {
+  left: 56%;
+  top: 78%;
+  width: 3.7%;
+  height: 5%;
+}
+.MoleDirt {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  bottom: 4%;
+  height: 42%;
+  border-radius: 50%;
+  background: #564333;
+  box-shadow: 0 3px #342e2b;
+}
+.MoleSprite {
+  position: absolute;
+  left: 0;
+  bottom: 9%;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  image-rendering: pixelated;
+  animation: molePeek 29s steps(16, end) infinite;
+  animation-delay: -13s;
+}
+.PondFish {
+  width: 3.2%;
+  min-width: 22px;
+  aspect-ratio: 12/7;
+  animation: fishSwim 8s linear infinite;
+}
+.PondFishOne {
+  right: 1.5%;
+  top: 4%;
+  animation-duration: 9.4s;
+  animation-delay: -2s;
+}
+.PondFishTwo {
+  left: 1%;
+  bottom: 2.5%;
+  width: 2.7%;
+  transform: scaleX(-1);
+  animation-duration: 11s;
+  animation-delay: -7s;
+}
+@keyframes rabbitPeek {
+  0%,
+  61% {
+    opacity: 0;
+    transform: translate(17px, 8px) scale(0.7);
+  }
+  66% {
+    opacity: 0.4;
+    transform: translate(8px, 3px) scale(0.82);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  74% {
+    transform: translate(-2px, -2px) scale(1.04);
+  }
+  78% {
+    transform: translate(0, 1px) scale(1);
+  }
+  82% {
+    transform: translate(-2px, -1px) scale(1.02);
+  }
+  86% {
+    opacity: 1;
+    transform: translate(1px, 0) scale(1);
+  }
+  90% {
+    opacity: 0.5;
+    transform: translate(9px, 6px) scale(0.82);
+  }
+  94%,
+  100% {
+    opacity: 0;
+    transform: translate(18px, 9px) scale(0.65);
+  }
+}
+@keyframes squirrelPeek {
+  0%,
+  57% {
+    opacity: 0;
+    transform: translate(15px, 5px) scale(0.72);
+  }
+  62% {
+    opacity: 0.6;
+    transform: translate(5px, 2px) scale(0.9);
+  }
+  66% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  70% {
+    transform: translate(-1px, -2px) rotate(-4deg);
+  }
+  74% {
+    transform: translate(1px, 0) rotate(4deg);
+  }
+  78% {
+    transform: translate(-1px, -1px) rotate(-2deg);
+  }
+  82% {
+    transform: translate(0, 0) rotate(0);
+  }
+  86% {
+    opacity: 1;
+    transform: translate(3px, 2px);
+  }
+  90% {
+    opacity: 0.5;
+    transform: translate(10px, 5px) scale(0.86);
+  }
+  94%,
+  100% {
+    opacity: 0;
+    transform: translate(18px, 8px) scale(0.65);
+  }
+}
+@keyframes molePeek {
+  0%,
+  58% {
+    opacity: 0;
+    transform: translateY(28px) scale(0.55);
+  }
+  63% {
+    opacity: 0.7;
+    transform: translateY(17px) scale(0.8);
+  }
+  68% {
+    opacity: 1;
+    transform: translateY(4px) scale(1);
+  }
+  72% {
+    transform: translateY(0) scale(1.04);
+  }
+  76% {
+    transform: translateY(2px) scale(1);
+  }
+  80% {
+    transform: translateY(-1px) scale(1.02);
+  }
+  84% {
+    transform: translateY(1px) scale(1);
+  }
+  88% {
+    opacity: 0.9;
+    transform: translateY(7px) scale(0.94);
+  }
+  92% {
+    opacity: 0.4;
+    transform: translateY(20px) scale(0.75);
+  }
+  96%,
+  100% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.55);
+  }
+}
+@keyframes fishSwim {
+  0%,
+  100% {
+    transform: translateX(0) translateY(0) scaleX(1);
+  }
+  12% {
+    transform: translateX(4px) translateY(-1px) scaleX(1);
+  }
+  25% {
+    transform: translateX(7px) translateY(1px) scaleX(1);
+  }
+  37% {
+    transform: translateX(10px) translateY(0) scaleX(1);
+  }
+  50% {
+    transform: translateX(13px) translateY(-1px) scaleX(-1);
+  }
+  62% {
+    transform: translateX(10px) translateY(1px) scaleX(-1);
+  }
+  75% {
+    transform: translateX(7px) translateY(0) scaleX(-1);
+  }
+  87% {
+    transform: translateX(3px) translateY(-1px) scaleX(-1);
+  }
+}
+.SlimeUnit {
+  will-change: left, top;
+}
+.RoomZoneLabel {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  padding: 7px 9px;
+  border: 2px solid #e4d39b;
+  color: #fff1cc;
+  background: #172523c9;
+  box-shadow: 3px 3px 0 #12211a88;
+  font:
+    7px 'Press Start 2P',
+    monospace;
+  text-shadow: 1px 2px #14232a;
+  pointer-events: none;
+}
+.RoomZoneLabel small {
+  color: #d9f45a;
+  font:
+    8px 'Space Mono',
+    monospace;
+}
+.CaveZoneLabel {
+  left: 3%;
+  top: 14%;
+  border-color: #86d8dc;
+}
+.FieldZoneLabel {
+  left: 43%;
+  top: 8%;
+  border-color: #d7e17e;
+}
+.RoomCameraControls {
+  position: absolute;
+  z-index: 12;
+  left: 2.2%;
+  bottom: 4%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 2px solid #78c9cd;
+  background: #09151be8;
+  box-shadow: 3px 3px 0 #0a0b14;
+}
+.RoomCameraControls span {
+  margin-right: 3px;
+  color: #d9f45a;
+  font:
+    6px 'Press Start 2P',
+    monospace;
+}
+.RoomCameraControls button {
+  display: grid;
+  width: 22px;
+  height: 21px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #5f898b;
+  color: #d9f4df;
+  background: #183038;
+  cursor: pointer;
+  font:
+    14px/1 'Space Mono',
+    monospace;
+}
+.RoomCameraControls button:hover,
+.RoomCameraControls button:focus-visible {
+  color: #1b2d30;
+  background: #d9f45a;
+  outline: none;
+}
+.LiveOpsLayout .SlimeRoom {
+  align-self: start;
+  min-width: 0;
+  min-height: 0;
+}
+.RoomViewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1672 / 941;
+  overflow: hidden;
+  background: #315842;
+}
+.RoomSceneFrame {
+  margin: 0 10px;
+  border: solid transparent;
+  border-width: 28px 34px;
+  border-image-source: url('../assets/room-botanical-frame-v1.png');
+  border-image-slice: 190 230;
+  border-image-width: 1;
+  border-image-repeat: round;
+  background: #14251e;
+}
+@media (max-width: 700px) {
+  .RoomSceneFrame {
+    margin: 0 6px;
+    border-width: 18px 22px;
+  }
+}
+@media (max-width: 520px) {
+  .RoomSceneFrame {
+    display: none;
+  }
+}
+.RoomHud {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #101923;
+}
+.RoomHud .RoomHeader {
+  position: static;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0;
+  font-size: 7px;
+  line-height: 1.5;
+}
+.RoomHud .RoomHeader small {
+  color: #d9f45a;
+  overflow-wrap: anywhere;
+  font:
+    9px/1.5 'Space Mono',
+    monospace;
+}
+.RoomHud .DigitalClock {
+  position: static;
+  min-width: 0;
+  padding: 8px;
+  transform: none;
+  box-shadow: none;
+}
+.RoomHud .DigitalClock strong {
+  font-size: 20px;
+}
+.RoomHud .ClockDate {
+  font-size: 6px;
+}
+.SlimeRoom .RoomCameraControls {
+  position: static;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  margin: 12px 12px 0;
+  box-shadow: none;
+}
+.RoomCameraControls .RoomCameraFit {
+  width: auto;
+  padding: 0 7px;
+  font:
+    6px 'Press Start 2P',
+    monospace;
+}
+.RoomCameraControls button:disabled {
+  opacity: 0.35;
+  cursor: default;
+  color: #d9f4df;
+  background: #183038;
+}
+.SlimeRoom .MissionPopup {
+  position: static;
+  width: auto;
+  margin: 12px;
+  box-shadow: none;
+}
+@media (max-width: 520px) {
+  .RoomViewport {
+    display: none;
+  }
+  .RoomHud {
+    gap: 6px;
+    padding: 8px;
+  }
+  .RoomHud .RoomHeader {
+    padding: 5px;
+    font-size: 6px;
+  }
+  .RoomHud .ClockDate {
+    font-size: 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .RoomWorld {
+    transition: none;
+  }
+}

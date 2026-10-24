@@ -1,0 +1,30 @@
+import { DemoAgents, FallbackModelCatalog } from './config.js';
+
+const State = {
+  agents: structuredClone(DemoAgents),
+  events: [],
+  auditEvents: [],
+  access: null,
+  operatorId: localStorage.getItem('slimeops-operator') || 'super-admin',
+  selectedAgentId: 'nexus',
+  profileAgentId: 'nexus',
+  connected: false,
+  lastTelemetryAt: null,
+  codexUsage: null,
+  agentUsageSeries: null,
+  modelCatalog: FallbackModelCatalog,
+  controlDrafts: new Map(),
+  dashboardReady: false,
+  knownDispatches: new Set(),
+  eventSource: null,
+  buildId: null,
+  openAgentId: null,
+  roomZoom: 1,
+  roomPan: 0,
+  roomPanY: 0,
+  roomSimulation: null,
+  latestDashboard: null,
+  terminalEventKey: null,
+};
+
+export { State };

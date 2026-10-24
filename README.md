@@ -38,16 +38,20 @@ El selector lee ese catálogo desde `GET /api/models`. Un modelo ya asignado a u
 
 | Ruta | Responsabilidad |
 | --- | --- |
-| `frontend/src/` | Interfaz estática: sala, tarjetas de agentes, popups, estilos y comportamiento. |
+| `frontend/src/` | Entrada de la interfaz, módulos JavaScript por función y estilos ordenados. |
 | `frontend/src/assets/` | Fondos y sprites pixel art usados por la interfaz. |
 | `frontend/build.mjs` | Genera `dist/`, el artefacto desplegable. |
-| `backend/app/main.py` | API FastAPI, stream en vivo, controles, perfiles y auditoría SQLite. |
+| `backend/app/main.py` | Composición de FastAPI: inicio, CORS y registro de routers. |
+| `backend/app/routes/` | Rutas HTTP de panel, agentes, accesos, Codex y misiones. |
+| `backend/app/repository.py` | Esquema SQLite, persistencia de perfiles y auditoría. |
 | `data/agent_activity.sqlite3` | Base local persistente; se crea automáticamente y no se versiona. |
 | `agents/` | Especificaciones funcionales de los agentes. |
 | `runtime/` | Base del runtime futuro que ejecutará agentes reales. |
 | `docs/` | Guía técnica y registro de cambios del proyecto. |
 
 Consulta [la guía técnica](docs/TECHNICAL_GUIDE.md) antes de extender el sistema y actualiza [el registro de cambios](docs/CHANGELOG.md) al introducir comportamiento, rutas o datos nuevos.
+
+El [mapa del código](docs/CODE_STRUCTURE.md) explica dónde modificar cada función y cómo ejecutar las comprobaciones.
 
 ## Principios
 

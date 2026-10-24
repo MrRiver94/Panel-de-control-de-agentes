@@ -1,0 +1,36 @@
+.CodexSessionsPanel {
+  grid-column: 1/-1;
+}
+.CodexSessionsPanel > small {
+  display: block;
+  color: #c1d1bd;
+  margin: 8px 0;
+}
+.CodexSessionsList {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+.CodexSessionRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(0, 2fr);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 2px solid #4b3540;
+  background: #171523;
+  color: var(--cream);
+  font:
+    9px 'Space Mono',
+    monospace;
+}
+.CodexSessionRow small {
+  color: #c1d1bd;
+  font-size: 8px;
+}
+@media (max-width: 600px) {
+  .CodexSessionRow {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+}

@@ -1,0 +1,335 @@
+/* Persistent side feeds: one animated micro-camera per agent. */
+.LiveOpsLayout {
+  display: grid;
+  grid-template-columns: minmax(178px, 0.34fr) minmax(0, 1fr) minmax(178px, 0.34fr);
+  gap: 12px;
+  align-items: stretch;
+}
+.AgentWatchRail {
+  display: grid;
+  grid-auto-rows: 1fr;
+  gap: 12px;
+  min-width: 0;
+}
+.AgentWatchCard {
+  --agent-tone: #d9f45a;
+  position: relative;
+  min-height: 0;
+  overflow: visible;
+  border: 3px solid #536d69;
+  background: #101b25;
+  box-shadow: 4px 4px 0 #091016;
+}
+.AgentWatchCard::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  z-index: 0;
+  pointer-events: none;
+  border: 1px solid #72908955;
+}
+.AgentWatchTop,
+.AgentWatchBottom,
+.AgentInfoButton {
+  position: relative;
+  z-index: 4;
+}
+.AgentWatchTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 27px;
+  padding: 7px 7px 3px;
+  font:
+    7px 'Press Start 2P',
+    monospace;
+}
+.AgentWatchTop strong {
+  color: #fff1d4;
+}
+.AgentWatchTop em {
+  margin-left: auto;
+  color: #9fcac4;
+  font:
+    6px 'Space Mono',
+    monospace;
+  font-style: normal;
+}
+.AgentSignal {
+  width: 6px;
+  height: 6px;
+  background: var(--agent-tone);
+  box-shadow: 0 0 6px var(--agent-tone);
+  animation: telemetryPulse 1s steps(2) infinite;
+}
+.AgentMiniScene {
+  position: relative;
+  height: 112px;
+  margin: 0 7px;
+  overflow: hidden;
+  border: 2px solid #34535a;
+  background: linear-gradient(165deg, #273b4c 0 47%, #182733 48% 100%);
+  box-shadow:
+    inset 0 -13px #13212b,
+    inset 0 0 18px #071118;
+}
+.AgentMiniScene::before {
+  content: '';
+  position: absolute;
+  inset: auto 0 12px;
+  height: 1px;
+  background: #78c9cd45;
+  box-shadow:
+    0 -28px #78c9cd20,
+    0 -56px #78c9cd14;
+}
+.MiniGlow {
+  position: absolute;
+  top: 11px;
+  right: 13px;
+  width: 16px;
+  height: 16px;
+  background: var(--agent-tone);
+  opacity: 0.24;
+  box-shadow: 0 0 20px 8px var(--agent-tone);
+  animation: miniGlow 1.4s steps(3) infinite;
+}
+.MiniDesk {
+  position: absolute;
+  z-index: 2;
+  right: 13px;
+  bottom: 20px;
+  width: 62px;
+  height: 21px;
+  border: 3px solid #2b2734;
+  background: #a46d4e;
+  box-shadow: 0 8px #47313a;
+  transform: skewX(-18deg);
+}
+.MiniDesk::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  bottom: 17px;
+  width: 29px;
+  height: 19px;
+  border: 3px solid #252a38;
+  background: #76cbd2;
+  box-shadow: inset 0 -5px #305666;
+  animation: miniScreen 1s steps(2) infinite;
+}
+.MiniCoffee {
+  position: absolute;
+  z-index: 3;
+  left: 22px;
+  bottom: 20px;
+  width: 14px;
+  height: 12px;
+  border: 2px solid #302638;
+  background: #fff1d4;
+  box-shadow: 5px 3px #65443c;
+  animation: miniCup 2.2s steps(2) infinite;
+}
+.MiniCoffee::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 1px;
+  width: 4px;
+  height: 5px;
+  border: 2px solid #302638;
+}
+.AgentFeedSlime {
+  position: absolute;
+  z-index: 3;
+  left: 22%;
+  bottom: 16px;
+  display: block;
+  width: 58px;
+  height: 72px;
+  background: url('../assets/slime-mini-sprite-sheet-v2.png') 0 0 / 400% 100% no-repeat;
+  filter: hue-rotate(var(--hue)) saturate(1.04);
+  image-rendering: pixelated;
+  transform-origin: bottom center;
+}
+.MiniParticles {
+  position: absolute;
+  z-index: 2;
+  left: 26%;
+  bottom: 74px;
+  width: 6px;
+  height: 6px;
+  background: var(--agent-tone);
+  opacity: 0.7;
+  box-shadow:
+    19px 11px 0 -1px #7ee2e8,
+    35px 3px 0 -2px #fff1d4;
+  animation: miniParticles 1s steps(3) infinite;
+}
+.AgentWatchCard.Resting .AgentFeedSlime {
+  animation: feedIdle 1.8s steps(2) infinite;
+}
+.AgentWatchCard.Resting.Sleep .AgentFeedSlime {
+  background-position: 100% 0;
+  animation: feedSleep 2.4s steps(2) infinite;
+}
+.AgentWatchCard.Working .AgentFeedSlime {
+  left: 17%;
+  background-position: 66.666% 0;
+  animation: feedWork 0.68s steps(2) infinite;
+}
+.AgentWatchCard.Commuting .AgentFeedSlime {
+  background-position: 33.333% 0;
+  animation: feedCommute 0.35s steps(2) infinite;
+}
+.AgentWatchCard.Working .MiniCoffee,
+.AgentWatchCard.Commuting .MiniCoffee {
+  animation: miniLeave 0.6s steps(2) forwards;
+}
+.AgentWatchCard.Resting.Sleep .MiniCoffee {
+  opacity: 0;
+}
+.AgentWatchCard.Resting.Eating .MiniCoffee {
+  border-radius: 50%;
+  background: #ffbd5c;
+}
+.AgentWatchCard.Working .MiniParticles {
+  animation-duration: 0.45s;
+}
+.AgentWatchBottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 7px;
+  color: #b9d9d6;
+  font-size: 7px;
+}
+.AgentWatchTokens {
+  color: var(--agent-tone);
+  white-space: nowrap;
+}
+.AgentInfoButton {
+  display: flex;
+  justify-content: space-between;
+  width: calc(100% - 14px);
+  margin: 0 7px 7px;
+  padding: 6px;
+  border: 1px solid #68928c;
+  color: #ddf5e7;
+  background: #182b32;
+  cursor: pointer;
+  font:
+    6px 'Press Start 2P',
+    monospace;
+}
+.AgentInfoButton:hover,
+.AgentInfoButton[aria-expanded='true'] {
+  color: #1d2930;
+  background: var(--agent-tone);
+}
+.AgentInfoButton span {
+  font:
+    10px 'Space Mono',
+    monospace;
+}
+.AgentDetailPopover {
+  position: absolute;
+  z-index: 10;
+  left: 6px;
+  right: 6px;
+  bottom: 5px;
+  padding: 10px;
+  border: 2px solid #d6ab72;
+  background: #0c1722f7;
+  box-shadow: 4px 4px 0 #070c12;
+  color: #e9f7e9;
+  animation: detailIn 0.2s steps(3);
+}
+.AgentDetailPopover b {
+  display: block;
+  padding-right: 15px;
+  color: var(--agent-tone);
+  font:
+    7px 'Press Start 2P',
+    monospace;
+}
+.AgentDetailPopover p {
+  margin: 8px 0;
+  color: #cfddd2;
+  font:
+    9px/1.45 'Space Mono',
+    monospace;
+}
+.AgentDetailPopover small {
+  color: #7ee2e8;
+  font-size: 7px;
+}
+.AgentPopoverClose {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  border: 0;
+  color: #fff1d4;
+  background: transparent;
+  cursor: pointer;
+  font:
+    16px/1 'Space Mono',
+    monospace;
+}
+@keyframes miniGlow {
+  50% {
+    opacity: 0.5;
+    transform: scale(1.14);
+  }
+}
+@keyframes miniScreen {
+  50% {
+    background: #c2ffff;
+    box-shadow:
+      inset 0 -5px #305666,
+      0 0 8px #7ee2e8;
+  }
+}
+@keyframes miniCup {
+  50% {
+    transform: translateY(-2px);
+  }
+}
+@keyframes miniParticles {
+  50% {
+    transform: translate(5px, -7px);
+    opacity: 0.2;
+  }
+}
+@keyframes feedIdle {
+  50% {
+    transform: translateY(-4px) scaleX(1.045);
+  }
+}
+@keyframes feedSleep {
+  50% {
+    transform: translateY(2px) scaleX(1.02);
+  }
+}
+@keyframes feedWork {
+  50% {
+    transform: translate(3px, -3px);
+  }
+}
+@keyframes feedCommute {
+  50% {
+    transform: translate(18px, -7px) rotate(-2deg);
+  }
+}
+@keyframes miniLeave {
+  to {
+    opacity: 0.05;
+    transform: translate(-13px, 17px);
+  }
+}
+@keyframes detailIn {
+  from {
+    transform: translateY(8px);
+    opacity: 0.2;
+  }
+}

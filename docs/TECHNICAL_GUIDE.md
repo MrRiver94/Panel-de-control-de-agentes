@@ -29,11 +29,13 @@ Los popups existentes son:
 
 La sala usa `RoomWorld` como cámara transformable. Las unidades se insertan en ese mundo desde `renderSlimeRoom`; las ventanas popup se mantienen fuera para no verse afectadas por el zoom.
 
+`RoomViewport` mantiene la proporción de la ilustración (1672/941) y recorta el mundo al explorar. El HUD, los controles y el formulario están fuera del mundo. Las coordenadas de cámara indican hacia dónde se mira, y la transformación traslada el mapa en sentido contrario. El desplazamiento máximo por eje es `(zoom - 1) × 50%` del viewport; con zoom 1 no hay desplazamiento. «Ver todo» restablece zoom 1 y ambos ejes a cero. Las coordenadas lógicas de agentes, paredes y efectos comparten el mismo mundo y no cambian al mover la cámara.
+
 La consola inferior muestra los eventos de `activity_events` recibidos por `/api/dashboard` y `/api/stream`, sin interpolar HTML de sus mensajes. La sala distingue `active`, `running`, `thinking`, `standby`, `paused`, `blocked` y `error`; los estados `thinking`, `paused` y `error` solo aparecen si el backend los comunica. No se infieren del consumo de tokens.
 
 ## Backend y datos
 
-`backend/app/main.py` es el único punto de entrada de la API. La base `data/agent_activity.sqlite3` guarda entre otras estas tablas:
+`backend/app/main.py` es el punto de entrada de la API y conecta el inicio, CORS y los routers de `backend/app/routes/`. Los contratos están en `models.py`, SQLite en `repository.py`, los permisos en `permissions.py`, el medidor en `telemetry.py` y la consulta local de cuotas en `codex_usage.py`. `state.py` reúne el roster compartido, las cachés y la ubicación de la base. La base `data/agent_activity.sqlite3` guarda entre otras estas tablas:
 
 | Tabla | Contenido |
 | --- | --- |
@@ -93,16 +95,18 @@ Así la auditoría refleja acciones reales y no solo la animación de la interfa
 ## Convenciones de desarrollo
 
 - Conserva la estética pixel art: petróleo oscuro, crema, lima, cian y bordes pixelados.
-- Reutiliza componentes JS: las tarjetas laterales nacen en `createAgentWatchCard`, los slimes de sala en `createSlimeUnit`.
-- Los estilos incrementales van en `frontend/src/room-upgrades.css`; los cimientos del layout están en `styles.css`.
+- Reutiliza componentes JS: las tarjetas laterales nacen en `features/agent-watch.js`, los slimes de sala en `room/render.js`, ambos bajo `frontend/src/js/`.
+- Los estilos viven en `frontend/src/styles/`; `app.css` mantiene explícitamente el orden de importación para conservar la cascada. Consulta `CODE_STRUCTURE.md` antes de cambiar ese orden.
 - Añade una migración compatible dentro de `create_audit_schema()` al crear una tabla o columna SQLite.
 - Registra toda mutación de operador en `activity_events`.
 - Actualiza este documento y `docs/CHANGELOG.md` con cada capacidad material.
 
 ## Publicación
 
-1. Ejecutar `node frontend/build.mjs`.
-2. Validar `node --check frontend/src/app.js` y `python -m py_compile backend/app/main.py`.
+1. Desde `frontend`, ejecutar `npm run build`.
+2. Ejecutar `npm test` y `npm run format:check` desde `frontend`; desde `backend`, `.venv/Scripts/python.exe -m unittest discover -s tests`.
 3. Publicar `dist/` en el Site privado existente. `app-version.json` hace que la pestaña publicada se recargue automáticamente al detectar una versión nueva.
 
 La URL publicada no cambia entre versiones.
+
+El build valida las referencias a recursos, copia las dependencias antes de las entradas, reemplaza archivos mediante renombrado y actualiza la versión al final. Conserva los originales de arte en `frontend/src/assets/` y retira del artefacto los archivos que ya no forman parte de la aplicación.
