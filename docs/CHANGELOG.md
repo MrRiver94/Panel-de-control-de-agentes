@@ -1,5 +1,23 @@
 # Registro de cambios
 
+## 2026-10-24 — Enrutamiento y resultado de las misiones de escritura
+
+- Corregido el falso positivo de MUSE al encontrar «ui» dentro de «Quiero»; el enrutamiento reconoce palabras y raíces.
+- Toda misión con permiso de escritura incluye a FORGE y SENTINEL, incluso órdenes como «ponle un sombrero».
+- Añadida comparación de archivos antes y después de la implementación, respetando los cambios que ya existían.
+- Diferenciados «Propuesta lista», «Cambios generados» y «Sin cambios»; un turno finalizado no se presenta como prueba de implementación.
+- Completada la petición del sombrero de DIRECTOR mediante una misión real. Ajustado después el anclaje al sprite para que acompañe sus animaciones.
+
+## 2026-10-24 — Misiones reales con Codex CLI
+
+- Sustituido el dispatch simulado por fases secuenciales reales con `codex exec --json`, perfiles versionados, modelo y esfuerzo por agente.
+- Añadidos proyecto, permisos de lectura/escritura, historial de fases, identificadores de sesión, resultados y cancelación al panel.
+- Eliminados contadores de tokens por tiempo y el arranque ficticio al fallar la API. Las nuevas muestras proceden de consumo informado por Codex.
+- Animaciones de trabajo dirigidas por eventos; la simulación visual permanece explícita y etiquetada.
+- Persistencia y recuperación de misiones interrumpidas, tiempo máximo, proceso protegido en Windows y bloqueo de instancia única.
+- Ejecución restringida al panel local; presupuestos de tokens identificados como orientativos.
+- Documentado el flujo en `CODEX_EXECUTION.md`.
+
 ## 2026-10-23 — Organización del código sin cambios funcionales
 
 - Dividido el frontend en módulos ES de sala, controles, sesiones, actividad, conexión y composición de vistas. Conservadas las claves y los intervalos existentes.

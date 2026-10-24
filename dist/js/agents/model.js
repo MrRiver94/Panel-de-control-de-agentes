@@ -34,7 +34,7 @@ function agentStateLabel(agent) {
       running: 'TRABAJANDO',
       thinking: 'PENSANDO',
       paused: 'EN PAUSA',
-      blocked: 'RECARGANDO',
+      blocked: 'BLOQUEADO',
       error: 'ERROR',
       standby: 'DESCANSANDO',
     }[visualStatus(agent)] || 'DESCANSANDO'
@@ -52,7 +52,7 @@ function agentActivityCopy(agent) {
   if (visualStatus(agent) === 'error')
     return 'El backend ha marcado un error. Revisa la consola de eventos para conocer el detalle.';
   if (visualStatus(agent) === 'blocked')
-    return 'Ha alcanzado un bloqueo o límite de uso y está recargando.';
+    return 'La ejecución está bloqueada. Revisa los eventos y el detalle de la misión.';
   if (visualStatus(agent) === 'paused') return 'Está en pausa por indicación del backend.';
   if (agent.status === 'working') return `Está en su estación: ${agent.action}.`;
   return 'Está en la sala común, disponible para la siguiente misión.';

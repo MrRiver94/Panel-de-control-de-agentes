@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-SlimeOps observa y configura un conjunto de agentes. No ejecuta todavía modelos desde el panel: representa su estado, enruta misiones y recibe actividad declarada por el runtime o por integraciones futuras.
+SlimeOps observa, configura y ejecuta agentes con Codex CLI local. Las misiones reales se ejecutan por fases secuenciales y sus eventos dirigen estados, animaciones y consumo. Consulta [el flujo de ejecución](CODEX_EXECUTION.md).
 
 ## Arquitectura
 
@@ -45,7 +45,7 @@ La consola inferior muestra los eventos de `activity_events` recibidos por `/api
 
 La base se inicializa al arrancar. Está ignorada por Git para mantener los registros locales privados.
 
-El ritmo de agentes deriva de diferencias entre lecturas del medidor acumulado; mientras no exista runtime real, ese medidor incluye la telemetría simulada del prototipo. La gráfica de Codex utiliza `dailyUsageBuckets` del App Server local y es independiente de los agentes.
+El ritmo de agentes deriva únicamente de eventos medidos `codex_usage`, guardados en `runtime_usage_samples`; las antiguas muestras del prototipo no se mezclan. La gráfica diaria de Codex es independiente de los agentes.
 
 ### Endpoints
 
@@ -76,21 +76,22 @@ La base incorpora estas tablas adicionales:
 
 Las capacidades son `dashboard.view`, `mission.create`, `agents.create`, `agents.update`, `agents.delete` y `access.manage`. La semilla contiene `super-admin` con `*` y `operador-misiones` con solo `dashboard.view` y `mission.create`.
 
-`AgentState` conserva `provider` (`codex` o `anthropic`) y `model` en `agent_registry`, también para agentes creados por API. Los registros antiguos reciben `codex` y modelo vacío; el panel lo muestra como «Sin asignar», sin inventar qué modelo ejecutan. `POST /api/agents/{id}/controls` acepta ambos parámetros además de tokens y esfuerzo. `GET /api/models` usa un catálogo sugerido o el JSON de `AGENT_MODEL_CATALOG_JSON`; es una lista de selección, no una comprobación de permisos ni de disponibilidad en las cuentas. El runtime futuro deberá consumir estos campos para elegir adaptador y modelo antes de ejecutar una misión.
+`AgentState` conserva `provider` y `model` en `agent_registry`. Los controles guardan estos parámetros, presupuesto orientativo y esfuerzo. `GET /api/models` usa un catálogo sugerido o `AGENT_MODEL_CATALOG_JSON`; no verifica disponibilidad en la cuenta. El runtime actual ejecuta el proveedor Codex y copia modelo/esfuerzo al crear la misión. Modelo vacío utiliza la configuración local de Codex.
 
 El frontend transporta el operador activo en `X-Operator-Id` y FastAPI comprueba el permiso en cada mutaciÃ³n. Es una capa local provisional para controlar el panel, no autenticaciÃ³n de red: no debe exponerse fuera de `127.0.0.1` sin identidad real, sesiones firmadas y protecciÃ³n CSRF.
 
 Las rutas CRUD son `GET /api/access/tree`, `POST /api/access/roles`, `POST /api/access/roles/{id}`, `DELETE /api/access/roles/{id}`, y sus equivalentes de usuarios. Los agentes se crean con `POST /api/agents`; los agentes creados pueden eliminarse con `DELETE /api/agents/{id}`. Los seis agentes base y el super-admin estÃ¡n protegidos contra borrado.
 
-### Integrar un ejecutor real
+### Ejecutor real de Codex
 
-Cuando exista un runtime, debe:
+`backend/app/execution.py` inicia las fases mediante Codex CLI local:
 
-1. Llamar a `/api/dispatch` al aceptar una misión.
-2. Enviar a `/api/activity` cada hito relevante con `agent_id`, `kind`, `message`, `input_tokens`, `output_tokens` y `reasoning_tokens` si el proveedor lo expone.
-3. No enviar ni persistir cadenas de razonamiento privadas.
+1. `/api/dispatch` acepta proyecto y permisos y devuelve `202` con `execution_id`.
+2. Los eventos JSONL actualizan agentes, auditoría y consumo medido; los turnos son secuenciales.
+3. `/api/executions` muestra las fases y sus resultados; `/api/executions/{id}/cancel` cancela el proceso.
+4. No se envían ni persisten cadenas de razonamiento privadas.
 
-Así la auditoría refleja acciones reales y no solo la animación de la interfaz.
+Consulta [CODEX_EXECUTION.md](CODEX_EXECUTION.md) para el flujo vigente, las tablas nuevas y los límites. Los informes manuales de `/api/activity` se rechazan mientras hay una misión activa para no sobrescribir su telemetría.
 
 ## Convenciones de desarrollo
 

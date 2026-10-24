@@ -1,7 +1,7 @@
 import { buildVisualAgent } from '../agents/model.js';
 import { API_URL, WorkStatuses } from '../config.js';
 import { renderAgentUsageChart, renderCodexUsageChart } from '../features/charts.js';
-import { renderCodexUsage, renderMetricsPanel } from '../features/metrics.js';
+import { renderCodexUsage } from '../features/metrics.js';
 import { detectRemoteDispatches } from '../features/missions.js';
 import { routeToRoom } from '../room/navigation.js';
 import { State } from '../state.js';
@@ -32,6 +32,7 @@ function consumeDashboard(dashboard) {
     Object.assign(localAgent, remoteAgent, {
       status,
       operationalStatus: remoteAgent.status,
+      workAction: remoteAgent.work_action || undefined,
       hue: remoteAgent.display_hue || localAgent.hue,
       action:
         remoteAgent.current_task === 'En espera'
@@ -66,6 +67,8 @@ function connectLiveStream() {
     } catch {}
   };
   stream.onerror = () => {
+    State.connected = false;
+    updateConnectionLabel();
     stream.close();
     if (State.eventSource === stream) {
       State.eventSource = null;
@@ -97,25 +100,6 @@ async function syncUsageSeries() {
   renderAgentUsageChart();
 }
 
-function runLocalTelemetry() {
-  if (State.connected) return;
-  let changed = false;
-  State.agents.forEach((agent) => {
-    if (agent.status !== 'working') return;
-    const rates = { low: 2, medium: 4, high: 7, xhigh: 11 };
-    agent.tokens_used = Math.min(
-      agent.token_budget,
-      agent.tokens_used + rates[agent.reasoning_effort],
-    );
-    if (agent.tokens_used >= agent.token_budget) agent.status = 'sleeping';
-    changed = true;
-  });
-  if (changed) {
-    State.lastTelemetryAt = new Date();
-    renderMetricsPanel();
-  }
-}
-
 export {
   consumeDashboard,
   syncDashboard,
@@ -123,5 +107,4 @@ export {
   checkForDeployment,
   syncCodexUsage,
   syncUsageSeries,
-  runLocalTelemetry,
 };

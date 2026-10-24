@@ -24,7 +24,7 @@
           <div class="ControlFields">
             <label>AGENTE<select id="agentSelect"></select></label
             ><label
-              >MÁX. TOKENS<input id="budgetInput" type="number" min="500" max="24000" step="500"
+              >PRESUP. TOKENS<input id="budgetInput" type="number" min="500" max="24000" step="500"
             /></label>
           </div>
           <div class="ControlFields ModelFields">
@@ -118,6 +118,29 @@
           <small id="codexSessionsStatus">Leyendo actividad local…</small>
           <div id="codexSessionsList" class="CodexSessionsList"></div>
         </article>
+      </section>
+      <section class="Panel ExecutionPanel" aria-label="Ejecución real de Codex">
+        <div class="PanelTitle">MISIONES REALES · CODEX</div>
+        <p id="runtimeStatus" role="status">Conectando con Codex local…</p>
+        <div class="ExecutionControls">
+          <label
+            >PROYECTO · RUTA ABSOLUTA<input
+              id="runtimeWorkspace"
+              placeholder="C:\\ruta\\a\\tu\\proyecto"
+          /></label>
+          <label
+            >PERMISOS<select id="runtimeSandbox">
+              <option value="read-only">Solo lectura</option>
+              <option value="workspace-write">Permitir cambios en el proyecto</option>
+            </select></label
+          >
+          <button id="refreshRuntime" type="button">RECONECTAR</button>
+        </div>
+        <small
+          >La orden se envía desde NUEVA MISIÓN, en la sala. Se ejecuta una misión cada vez. El
+          presupuesto de tokens es orientativo; el consumo se recibe al terminar cada turno.</small
+        >
+        <div id="executionHistory" class="ExecutionHistory" aria-live="polite"></div>
       </section>
       <div class="RoomSimulationBar">
         <button id="simulateAll" type="button">SIMULAR: TODOS AL TRABAJO</button
@@ -233,11 +256,13 @@
               <input
                 id="missionInput"
                 required
+                minlength="3"
+                maxlength="2000"
                 autocomplete="off"
                 placeholder="Escribe una orden…"
-              /><button>ENVIAR</button>
+              /><button id="submitMission">EJECUTAR</button>
             </div>
-            <small id="missionSummary">Los slimes descansan.</small>
+            <small id="missionSummary" role="status">Esperando una misión real.</small>
           </form>
         </section>
         <aside

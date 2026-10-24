@@ -10,7 +10,14 @@ const fetchApi = async (path, options = {}) => {
       ...(options.headers || {}),
     },
   });
-  if (!response.ok) throw new Error(await response.text());
+  if (!response.ok) {
+    const text = await response.text();
+    let detail;
+    try {
+      detail = JSON.parse(text).detail;
+    } catch {}
+    throw new Error(typeof detail === 'string' ? detail : `Error ${response.status}`);
+  }
   return response.json();
 };
 

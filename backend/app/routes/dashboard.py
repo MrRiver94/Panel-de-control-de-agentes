@@ -40,10 +40,10 @@ def usage_series(request: Request, minutes: int = 60) -> dict[str, Any]:
     cutoff = (now() - timedelta(minutes=minutes)).isoformat()
     with state.audit_lock, audit_connection() as connection:
         rows = connection.execute(
-            "SELECT sampled_at, total_tokens, delta_tokens, elapsed_seconds FROM usage_samples "
+            "SELECT sampled_at, total_tokens, delta_tokens, elapsed_seconds FROM runtime_usage_samples "
             "WHERE sampled_at >= ? ORDER BY sampled_at ASC LIMIT 480", (cutoff,)
         ).fetchall()
-    return {"window_minutes": minutes, "source": "agent-meter", "points": [
+    return {"window_minutes": minutes, "source": "codex-exec", "points": [
         {"at": row["sampled_at"], "total_tokens": row["total_tokens"],
          "tokens_per_minute": round(row["delta_tokens"] * 60 / row["elapsed_seconds"], 1) if row["elapsed_seconds"] > 0 else 0}
         for row in rows

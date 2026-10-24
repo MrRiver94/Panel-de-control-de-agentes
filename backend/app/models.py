@@ -30,6 +30,10 @@ class AgentState(BaseModel):
     idle_mode: IdleMode = "Coffee"
     default_action: str = "En espera"
     enabled_actions: list[str] = Field(default_factory=lambda: ["coordinar"])
+    execution_id: str | None = None
+    session_id: str | None = None
+    work_action: str | None = None
+    usage_source: str = "codex-exec"
 
 class ControlUpdate(BaseModel):
     token_budget: int = Field(ge=500, le=24000)
@@ -87,7 +91,10 @@ class ActivityEvent(BaseModel):
 
 class DispatchRequest(BaseModel):
     prompt: str = Field(min_length=3, max_length=2000)
+    workspace: str | None = Field(default=None, max_length=500)
+    sandbox: Literal["read-only", "workspace-write"] = "read-only"
 
 class DispatchResponse(BaseModel):
     agent_ids: list[str]
     plan: str
+    execution_id: str

@@ -1,4 +1,5 @@
 import { startCodexSessions } from './js/features/sessions.js';
+import { startExecutions } from './js/features/executions.js';
 import { $ } from './js/dom.js';
 import { bindAccess, bindAgentCreation, bindAgentDeletion } from './js/features/access.js';
 import { renderAgentUsageChart, renderCodexUsageChart } from './js/features/charts.js';
@@ -9,7 +10,6 @@ import { restoreRoomAgent, saveRoomState } from './js/room/storage.js';
 import {
   checkForDeployment,
   connectLiveStream,
-  runLocalTelemetry,
   syncCodexUsage,
   syncDashboard,
   syncUsageSeries,
@@ -19,6 +19,7 @@ import { renderDashboard, updateConnectionLabel, updateDigitalClock } from './js
 import { bindInteractions } from './js/ui/events.js';
 
 startCodexSessions();
+startExecutions();
 State.agents.forEach(restoreRoomAgent);
 bindAgentDeletion();
 $('#simulateAll').addEventListener('click', () =>
@@ -44,7 +45,6 @@ setInterval(() => syncDashboard().catch(() => {}), 2000);
 setInterval(() => syncUsageSeries().catch(() => {}), 15000);
 setInterval(() => syncCodexUsage().catch(() => {}), 60000);
 setInterval(() => checkForDeployment().catch(() => {}), 25000);
-setInterval(runLocalTelemetry, 1000);
 setInterval(makeSlimesWander, 4200);
 setInterval(cycleWorkActions, 3600);
 setInterval(saveRoomState, 500);

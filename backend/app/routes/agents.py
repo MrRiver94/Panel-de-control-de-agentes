@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 
 from .. import state
+from ..execution import manager, ACTIVE
 from ..agent_utils import get_agent
 from ..models import ActivityEvent, ActivityIn, AgentCreate, AgentState, AgentStatusUpdate, ControlUpdate, ProfileUpdate
 from ..permissions import require_permission
@@ -38,6 +39,8 @@ def update_controls(agent_id: str, update: ControlUpdate, request: Request) -> A
 def update_agent_status(agent_id: str, update: AgentStatusUpdate, request: Request) -> AgentState:
     """Accept an explicit runtime state; never infer thinking or errors from token usage."""
     require_permission(request, "agents.update")
+    if manager.current and manager.current["status"] in ACTIVE:
+        raise HTTPException(409, detail="Los estados de la misión activa los controla Codex.")
     agent = get_agent(agent_id)
     agent.status = update.status
     if update.current_task is not None:
@@ -97,7 +100,10 @@ def delete_agent(agent_id: str, request: Request) -> dict[str, str]:
 
 
 @router.post("/api/activity", response_model=ActivityEvent)
-def record_activity(activity: ActivityIn) -> ActivityEvent:
+def record_activity(activity: ActivityIn, request: Request) -> ActivityEvent:
+    require_permission(request, "agents.update")
+    if manager.current and manager.current["status"] in ACTIVE:
+        raise HTTPException(409, detail="La telemetría de la misión activa procede de Codex.")
     agent = get_agent(activity.agent_id)
     tokens = activity.input_tokens + activity.output_tokens + activity.reasoning_tokens
     agent.tokens_used += tokens

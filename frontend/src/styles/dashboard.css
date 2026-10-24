@@ -256,6 +256,27 @@
   filter: drop-shadow(2px 3px 0 #1a1319);
   transition: none;
 }
+.SlimeUnit[data-agent-id='director'] .SlimeSprite::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  top: 24px;
+  left: 18px;
+  width: 19px;
+  height: 6px;
+  border: 1px solid #25424a;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(to bottom, #ffe3a0 0 1px, #d99a43 1px 100%);
+  box-shadow:
+    1px 6px 0 -1px #25424a,
+    2px 5px 0 -1px #d99a43;
+  image-rendering: pixelated;
+  filter: hue-rotate(calc(0deg - var(--hue, 0deg)));
+  pointer-events: none;
+}
+.SlimeUnit[data-agent-id='director'].Sleep .SlimeSprite::before {
+  top: 27px;
+}
 .SlimeUnit::before {
   content: '';
   position: absolute;

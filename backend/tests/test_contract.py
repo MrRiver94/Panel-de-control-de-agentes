@@ -14,23 +14,15 @@ from app.catalog import configured_model_catalog
 from app import state
 from app.repository import load_agent_registry
 from app.telemetry import sample_agent_usage
+from app.execution import choose_agents
 
 
 class ModelControlsTests(unittest.TestCase):
     def test_environment_requests_select_muse(self) -> None:
-        main = import_module("app.main")
-        original = {key: value.model_copy(deep=True) for key, value in state.agents.items()}
-        with TemporaryDirectory() as directory, patch.object(state, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
-            try:
-                with TestClient(main.app) as client:
-                    for prompt in ("Corrige las luces de la cueva", "Anima los árboles", "Prepara un spritesheet de agua"):
-                        with self.subTest(prompt=prompt):
-                            response = client.post("/api/dispatch", json={"prompt": prompt})
-                            self.assertEqual(response.status_code, 200)
-                            self.assertIn("muse", response.json()["agent_ids"])
-            finally:
-                state.agents.clear()
-                state.agents.update(original)
+        # Routing is pure; this regression must never launch paid Codex executions.
+        for prompt in ("Corrige las luces de la cueva", "Anima los árboles", "Prepara un spritesheet de agua"):
+            with self.subTest(prompt=prompt):
+                self.assertIn("muse", choose_agents(prompt))
 
     def test_controls_accept_provider_model_and_budget(self) -> None:
         control = ControlUpdate(token_budget=4000, reasoning_effort="high", provider="anthropic", model="claude-sonnet-4-6")

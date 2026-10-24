@@ -5,6 +5,7 @@ node_modules/
 .env
 data/*.sqlite3
 data/*.sqlite3-*
+data/*.lock
 .pet-deps/
 Pets/
 .sites-publish/

@@ -24,7 +24,11 @@ El panel publicado se conecta a `http://127.0.0.1:8000`; por eso la API debe est
 
 ## Proveedor y modelo por agente
 
-En **Control del agente** puedes elegir `Codex / OpenAI` o `Anthropic / Claude`, seleccionar un modelo y guardar la elección junto al límite de tokens y el esfuerzo. El backend conserva estos parámetros en SQLite y los devuelve en `/api/dashboard`. Los modelos sugeridos no implican acceso a la cuenta; la ejecución real de modelos aún no está conectada.
+En **Control del agente** puedes guardar proveedor, modelo, presupuesto orientativo de tokens y esfuerzo. El backend conserva estos parámetros en SQLite. Las misiones reales utilizan **Codex local**, su sesión iniciada y el modelo elegido; el proveedor Anthropic queda disponible como configuración, sin ejecución conectada. Los modelos sugeridos no implican acceso a la cuenta.
+
+## Misiones reales
+
+En **MISIONES REALES · CODEX**, selecciona la carpeta Git del proyecto y sus permisos. Envía la orden desde **NUEVA MISIÓN** en la sala. Los agentes se ejecutan por turnos mediante Codex CLI; el historial muestra sesiones, resultados y consumo medido. Puedes cancelar desde el mismo panel. Consulta [la guía de ejecución](docs/CODEX_EXECUTION.md) para configuración, límites y recuperación.
 
 Para sustituir el catálogo sugerido por los modelos de tu entorno, define `AGENT_MODEL_CATALOG_JSON` antes de arrancar la API. Ejemplo en PowerShell:
 
@@ -46,7 +50,8 @@ El selector lee ese catálogo desde `GET /api/models`. Un modelo ya asignado a u
 | `backend/app/repository.py` | Esquema SQLite, persistencia de perfiles y auditoría. |
 | `data/agent_activity.sqlite3` | Base local persistente; se crea automáticamente y no se versiona. |
 | `agents/` | Especificaciones funcionales de los agentes. |
-| `runtime/` | Base del runtime futuro que ejecutará agentes reales. |
+| `backend/app/execution.py` | Ejecución real mediante Codex CLI y ciclo de vida de misiones. |
+| `runtime/` | Referencia anterior del Agents SDK; no interviene en las misiones del panel. |
 | `docs/` | Guía técnica y registro de cambios del proyecto. |
 
 Consulta [la guía técnica](docs/TECHNICAL_GUIDE.md) antes de extender el sistema y actualiza [el registro de cambios](docs/CHANGELOG.md) al introducir comportamiento, rutas o datos nuevos.

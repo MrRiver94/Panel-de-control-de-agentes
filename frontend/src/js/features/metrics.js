@@ -8,19 +8,18 @@ function renderMetricsPanel() {
   const active = State.agents.filter(
     (agent) => agent.status === 'working' && visualStatus(agent) !== 'error',
   ).length;
-  const usage = Math.min(100, Math.round((used / budget) * 100));
-  const margin = 100 - usage;
+  const usage = Math.round((used / budget) * 100);
+  const margin = Math.max(0, 100 - usage);
   const health = usage < 65 ? 'EFICIENTE' : usage < 85 ? 'VIGILAR' : 'REVISAR';
   $('#budgetUsage').textContent = `${usage}%`;
   $('#budgetMargin').textContent = `${margin}%`;
   $('#activeAgents').textContent = `${active}/${State.agents.length}`;
   $('#budgetHealth').textContent = health;
-  $('#budgetBar').style.width = `${usage}%`;
+  $('#budgetBar').style.width = `${Math.min(100, usage)}%`;
   $('#budgetNumbers').textContent = `${formatNumber(used)} / ${formatNumber(budget)} tokens`;
-  $('#efficiencyMessage').textContent =
-    usage < 65 ? 'Gasto bajo control' : usage < 85 ? 'Prioriza tareas complejas' : 'Ajusta límites';
+  $('#efficiencyMessage').textContent = 'Consumo medido · presupuesto orientativo';
   $('#telemetryStamp').textContent = State.lastTelemetryAt
-    ? `Actualizado ${State.lastTelemetryAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · ${State.connected ? 'API en directo' : 'modo simulación'}`
+    ? `Actualizado ${State.lastTelemetryAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · ${State.connected ? 'API en directo' : 'sin conexión'}`
     : 'Esperando telemetría';
 }
 

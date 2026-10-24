@@ -5,6 +5,7 @@ import { stopRoomSimulation } from '../room/simulation.js';
 import { fetchApi } from '../services/api.js';
 import { State } from '../state.js';
 import { renderDashboard } from '../ui/dashboard.js';
+import { syncExecutions } from './executions.js';
 
 function triggerWorkAnimation(agentIds) {
   State.agents
@@ -18,65 +19,40 @@ function triggerWorkAnimation(agentIds) {
 }
 
 function detectRemoteDispatches(events) {
-  const dispatches = events.filter((event) => event.kind === 'mission_dispatched');
-  if (!State.dashboardReady) {
-    dispatches.forEach((event) => State.knownDispatches.add(event.id));
-    State.dashboardReady = true;
-    return;
-  }
-  const agentIds = dispatches
-    .filter((event) => !State.knownDispatches.has(event.id))
-    .map((event) => {
-      State.knownDispatches.add(event.id);
-      return State.agents.find((agent) => agent.name === event.agent)?.id;
-    })
-    .filter(Boolean);
-  if (!State.roomSimulation) triggerWorkAnimation([...new Set(agentIds)]);
-}
-
-function localRouteMission(prompt) {
-  const value = prompt.toLowerCase();
-  const selected = ['director', 'nexus'];
-  if (/investiga|fuente|busca|compet|analiza/.test(value)) selected.push('scout');
-  if (/crea|constru|código|codigo|web|diseña|disena/.test(value)) selected.push('forge');
-  if (/revisa|calidad|error|test|riesgo/.test(value)) selected.push('sentinel');
-  if (
-    /diseñ|disen|visual|estética|estetica|ui|ux|pixel|anim|ilustración|ilustracion|arte|estilo|interfaz|layout|escenario|paisaje|ilumina|luces|luz|sprite|vegetación|vegetacion|árbol|arbol/.test(
-      value,
-    )
-  )
-    selected.push('muse');
-  return [...new Set(selected.length === 2 ? [...selected, 'scout'] : selected)];
+  // The dashboard's operational status is authoritative, including completed turns.
+  events
+    .filter((event) => event.kind === 'mission_dispatched')
+    .forEach((event) => State.knownDispatches.add(event.id));
+  State.dashboardReady = true;
 }
 
 async function submitMission(event) {
   event.preventDefault();
   const input = $('#missionInput');
   const prompt = input.value.trim();
-  if (!prompt) return;
+  if (prompt.length < 3 || !State.runtimeReady || State.executionBusy) return;
   if (State.roomSimulation) stopRoomSimulation();
-  let assigned = localRouteMission(prompt);
-  State.agents.forEach((agent) => {
-    if (!assigned.includes(agent.id)) {
-      agent.status = 'sleeping';
-      routeToRoom(agent, 'rest');
-    }
-  });
-  triggerWorkAnimation(assigned);
-  $('#missionSummary').textContent = 'Trabajo iniciado. Los slimes van hacia su despacho…';
-  input.value = '';
-  renderDashboard();
+  const button = $('#submitMission');
+  button.disabled = true;
+  State.executionBusy = true;
+  $('#missionSummary').textContent = 'Solicitando ejecución a Codex…';
   try {
     const result = await fetchApi('/api/dispatch', {
       method: 'POST',
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({
+        prompt,
+        workspace: $('#runtimeWorkspace').value.trim() || null,
+        sandbox: $('#runtimeSandbox').value,
+      }),
     });
-    assigned = result.agent_ids;
-    triggerWorkAnimation(assigned);
+    input.value = '';
     $('#missionSummary').textContent = result.plan;
-  } catch {
-    $('#missionSummary').textContent = 'Misión iniciada en modo demo.';
+    await syncExecutions();
+  } catch (error) {
+    State.executionBusy = false;
+    button.disabled = false;
+    $('#missionSummary').textContent = `No se inició la misión: ${error.message}`;
   }
 }
 
-export { triggerWorkAnimation, detectRemoteDispatches, localRouteMission, submitMission };
+export { triggerWorkAnimation, detectRemoteDispatches, submitMission };

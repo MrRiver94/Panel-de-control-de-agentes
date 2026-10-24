@@ -9,7 +9,7 @@ const DemoAgents = [
     role: 'Dirección',
     tone: '#ffd166',
     hue: '-100deg',
-    tokens_used: 1260,
+    tokens_used: 0,
     token_budget: 6000,
     reasoning_effort: 'high',
     status: 'sleeping',
@@ -24,7 +24,7 @@ const DemoAgents = [
     role: 'Coordinación',
     tone: '#d9f45a',
     hue: '68deg',
-    tokens_used: 2870,
+    tokens_used: 0,
     token_budget: 8000,
     reasoning_effort: 'high',
     status: 'sleeping',
@@ -39,7 +39,7 @@ const DemoAgents = [
     role: 'Investigación',
     tone: '#79e8ee',
     hue: '0deg',
-    tokens_used: 1920,
+    tokens_used: 0,
     token_budget: 5500,
     reasoning_effort: 'medium',
     status: 'sleeping',
@@ -54,7 +54,7 @@ const DemoAgents = [
     role: 'Construcción',
     tone: '#ff789d',
     hue: '135deg',
-    tokens_used: 840,
+    tokens_used: 0,
     token_budget: 7000,
     reasoning_effort: 'medium',
     status: 'sleeping',
@@ -69,7 +69,7 @@ const DemoAgents = [
     role: 'Calidad',
     tone: '#ab8cff',
     hue: '230deg',
-    tokens_used: 610,
+    tokens_used: 0,
     token_budget: 4500,
     reasoning_effort: 'low',
     status: 'sleeping',
@@ -84,7 +84,7 @@ const DemoAgents = [
     role: 'Dirección de arte',
     tone: '#ffaf5f',
     hue: '-45deg',
-    tokens_used: 430,
+    tokens_used: 0,
     token_budget: 6200,
     reasoning_effort: 'high',
     status: 'sleeping',
@@ -104,7 +104,7 @@ const BreakActivities = {
   muse: 'talk',
 };
 
-const WorkStatuses = new Set(['active', 'running', 'thinking', 'error']);
+const WorkStatuses = new Set(['active', 'running', 'thinking']);
 
 const WorkActionCycle = [
   { id: 'typing', label: 'programando', glyph: '⌨' },
@@ -198,6 +198,7 @@ const RoomVisualFields = [
 ];
 
 DemoAgents.forEach((agent) => {
+  agent.tokens_used = 0;
   agent.sleep = [...RoomStations[agent.id].rest];
   agent.work = [...RoomStations[agent.id].desk];
   agent.position = [...agent.sleep];

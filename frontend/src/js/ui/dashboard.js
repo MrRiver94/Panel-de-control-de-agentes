@@ -17,7 +17,9 @@ function renderDashboard() {
 }
 
 function updateConnectionLabel() {
-  $('#apiStatus').textContent = State.connected ? '● API CONECTADA' : '● API DEMO';
+  $('#apiStatus').textContent = State.connected
+    ? '● API CONECTADA'
+    : '● SIN CONEXIÓN · ÚLTIMO ESTADO';
   $('#apiStatus').style.color = State.connected ? 'var(--acid)' : 'var(--cyan)';
 }
 

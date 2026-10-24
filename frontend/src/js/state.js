@@ -9,6 +9,8 @@ const State = {
   selectedAgentId: 'nexus',
   profileAgentId: 'nexus',
   connected: false,
+  runtimeReady: false,
+  executionBusy: false,
   lastTelemetryAt: null,
   codexUsage: null,
   agentUsageSeries: null,

@@ -22,6 +22,7 @@ La interfaz usa módulos ES nativos del navegador. `frontend/src/app.js` conecta
 | `features/metrics.js`, `charts.js` | Medidores, cuotas y gráficas. |
 | `features/activity.js` | Actividad, consola e historial. |
 | `features/missions.js` | Asignaciones y envío de misiones. |
+| `features/executions.js` | Proyecto, permisos, historial de misiones reales y cancelación. |
 | `features/sessions.js` | Lista de sesiones de Codex. |
 | `services/api.js` | Cliente HTTP y cabecera de operador, compartido por todos los paneles. |
 | `services/live.js` | Dashboard, SSE, consultas periódicas y versión publicada. |
@@ -30,6 +31,8 @@ La interfaz usa módulos ES nativos del navegador. `frontend/src/app.js` conecta
 Las funciones que conectan distintas vistas se llaman después del arranque. Los módulos de renderizado no deben iniciar temporizadores al importarse. Las pruebas cargan el grafo real de módulos en contextos aislados, sustituyendo únicamente las vistas que no pertenecen a cada comprobación.
 
 ## Estilos y recursos
+
+La ejecución real está documentada en [CODEX_EXECUTION.md](CODEX_EXECUTION.md). Sus servicios se encuentran en `backend/app/execution.py`, `codex_process.py`, `execution_store.py`, `process_lifetime.py` y `runtime_lock.py`.
 
 `frontend/src/styles/app.css` es la entrada única de estilos. Importa los archivos por bloques en el mismo orden que tenían los estilos anteriores para conservar el resultado visual. Algunas reglas de base se completan en archivos posteriores: no reordenar los imports sin comprobar sus efectos en navegador.
 

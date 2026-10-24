@@ -1,4 +1,4 @@
-import { $, formatNumber } from '../dom.js';
+import { $, formatNumber, escapeHtml } from '../dom.js';
 import { fetchApi } from '../services/api.js';
 import { State } from '../state.js';
 
@@ -11,7 +11,7 @@ function renderActivityLog() {
     State.events
       .map(
         (event) =>
-          `<article class="ActivityItem"><time>${new Date(event.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</time><div><b>${event.agent} · ${eventLabel(event)}</b><br><span>${event.message}</span></div></article>`,
+          `<article class="ActivityItem"><time>${new Date(event.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</time><div><b>${escapeHtml(event.agent)} · ${escapeHtml(eventLabel(event))}</b><br><span>${escapeHtml(event.message)}</span></div></article>`,
       )
       .join('') || '<div class="ActivityItem"><time>—</time><span>Sin actividad aún.</span></div>';
 }
@@ -53,7 +53,7 @@ function renderAuditHistory() {
     events
       .map(
         (event) =>
-          `<article class="AuditRecord"><time>${new Date(event.created_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'medium' })}</time><div><b>${event.agent}</b><em>${eventLabel(event)}</em><p>${event.message}</p><small>ENTRADA ${formatNumber(event.input_tokens)} · SALIDA ${formatNumber(event.output_tokens)} · RAZONAMIENTO ${formatNumber(event.reasoning_tokens)} · TOTAL ${formatNumber(event.tokens)}</small></div></article>`,
+          `<article class="AuditRecord"><time>${new Date(event.created_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'medium' })}</time><div><b>${escapeHtml(event.agent)}</b><em>${escapeHtml(eventLabel(event))}</em><p>${escapeHtml(event.message)}</p><small>ENTRADA ${formatNumber(event.input_tokens)} · SALIDA ${formatNumber(event.output_tokens)} · RAZONAMIENTO ${formatNumber(event.reasoning_tokens)} · TOTAL ${formatNumber(event.tokens)}</small></div></article>`,
       )
       .join('') || '<p class="AuditEmpty">Aún no hay actividad guardada.</p>';
 }

@@ -27,6 +27,13 @@ El frontend se conecta por defecto a `http://127.0.0.1:8000`.
 - `POST /api/agents/{agent_id}/controls`: cambia `token_budget` y `reasoning_effort`.
 - `POST /api/activity`: registra una actividad con tokens de entrada, salida y razonamiento.
 - `POST /api/agents/{agent_id}/profile`: persiste nombre, rol, estilo, descanso y acciones habilitadas.
+- `GET /api/runtime`: disponibilidad y autenticación de Codex local.
+- `POST /api/dispatch`: inicia una misión real y devuelve `202` con su identificador.
+- `GET /api/executions`: historial persistente de misiones.
+- `GET /api/executions/{id}`: fases, sesiones, resultados y consumo de una misión.
+- `POST /api/executions/{id}/cancel`: solicita cancelar el árbol de procesos.
+
+La ejecución requiere conexión y origen locales, además de la cabecera `X-Operator-Id` que envía el frontend. Usa un único worker. Se reutiliza el login de Codex CLI; no se copian claves al panel. [Configuración y límites](../docs/CODEX_EXECUTION.md).
 
 `reasoning_effort` es una política de ejecución (`low`, `medium`, `high`, `xhigh`), no contenido del pensamiento. Al conectar un proveedor, guarda solo los campos de uso que devuelva su API, como `reasoning_tokens`.
 

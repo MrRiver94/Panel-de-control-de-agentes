@@ -47,7 +47,7 @@ function renderControlPanel() {
   $('#modelHint').textContent =
     State.modelCatalog.source === 'configured'
       ? 'Modelos recibidos de la configuración de la API.'
-      : 'Modelos sugeridos; la disponibilidad depende de tus cuentas. El panel aún no ejecuta inferencias.';
+      : 'Modelos sugeridos; la disponibilidad depende de tu cuenta. Sin asignar utiliza el modelo de Codex local. Presupuesto orientativo por fase.';
   $('#effortSelector').innerHTML = EffortLevels.map(
     (level) =>
       `<button class="EffortButton ${draft.reasoning_effort === level ? 'Active' : ''}" data-effort="${level}">${uppercase(level)}</button>`,

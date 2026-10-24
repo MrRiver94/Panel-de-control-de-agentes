@@ -1,0 +1,96 @@
+.ExecutionPanel {
+  margin: 12px 0;
+}
+.ExecutionPanel > p,
+.ExecutionPanel > small {
+  color: var(--cyan);
+  font:
+    11px 'Space Mono',
+    monospace;
+  line-height: 1.7;
+}
+.ExecutionControls {
+  display: grid;
+  grid-template-columns: minmax(200px, 2fr) minmax(180px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin: 14px 0;
+}
+.ExecutionControls label {
+  display: grid;
+  gap: 8px;
+  font:
+    10px 'Space Mono',
+    monospace;
+}
+.ExecutionControls input,
+.ExecutionControls select {
+  min-width: 0;
+  width: 100%;
+  padding: 10px;
+  background: #101b25;
+  color: var(--cream);
+  border: 2px solid #496667;
+  font:
+    12px 'Space Mono',
+    monospace;
+}
+.ExecutionControls button,
+.ExecutionHistory button {
+  padding: 10px;
+  color: var(--cream);
+  background: #243b3c;
+  border: 2px solid #648684;
+  cursor: pointer;
+}
+.ExecutionHistory {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+.ExecutionRecord {
+  padding: 12px;
+  border: 2px solid #496667;
+  background: #101b25;
+  font:
+    12px 'Space Mono',
+    monospace;
+  overflow-wrap: anywhere;
+}
+.ExecutionRecord summary {
+  cursor: pointer;
+  line-height: 1.8;
+}
+.ExecutionRecord p {
+  line-height: 1.7;
+}
+.ExecutionRecord pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    12px 'Space Mono',
+    monospace;
+  line-height: 1.7;
+  max-height: 400px;
+  overflow: auto;
+}
+.ExecutionStep {
+  border-top: 1px solid #496667;
+  margin-top: 10px;
+  padding-top: 8px;
+}
+.ExecutionRecord[data-status='failed'] {
+  border-color: #ff789d;
+}
+.ExecutionRecord[data-status='no_changes'] {
+  border-color: #ffd166;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+@media (max-width: 700px) {
+  .ExecutionControls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
