@@ -11,3 +11,5 @@ data/workspaces/
 Pets/
 .sites-publish/
 .sites-packages/
+.build/
+releases/

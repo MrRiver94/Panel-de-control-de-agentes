@@ -10,6 +10,7 @@ const State = {
   profileAgentId: 'nexus',
   connected: false,
   runtimeReady: false,
+  monitorOnly: false,
   executionBusy: false,
   monitorWorkspace: localStorage.getItem('slimeops-workspace') || '',
   externalSessions: [],

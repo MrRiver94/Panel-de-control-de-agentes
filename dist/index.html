@@ -114,27 +114,43 @@
           <div class="ActivityList" id="activityLog"></div>
         </article>
         <article class="Panel CodexSessionsPanel">
-          <div class="PanelTitle">SESIONES CODEX <i class="LivePulse"></i></div>
+          <div class="PanelTitle">MONITOR LOCAL · CODEX <i class="LivePulse"></i></div>
+          <p id="localMonitorStatus" role="status">Detectando Codex en tu ordenador…</p>
+          <small id="localAccountStatus">Consultando conexión local…</small>
+          <details class="LocalMonitorDetails">
+            <summary>CONEXIÓN Y DIAGNÓSTICO</summary>
+            <p id="localMonitorDirectory"></p>
+            <p>
+              SlimeOps lee actividad local. No necesita tu contraseña ni copia las credenciales de
+              Codex. Anthropic estará disponible en una versión posterior.
+            </p>
+            <button id="refreshLocalMonitor" type="button">VOLVER A DETECTAR</button>
+          </details>
           <small id="codexSessionsStatus">Leyendo actividad local…</small>
           <div id="codexSessionsList" class="CodexSessionsList"></div>
         </article>
       </section>
       <section class="Panel ExecutionPanel" aria-label="Ejecución real de Codex">
-        <div class="PanelTitle">MISIONES REALES · CODEX</div>
+        <div class="PanelTitle" id="runtimeTitle">PROYECTO Y ACTIVIDAD</div>
         <p id="runtimeStatus" role="status">Conectando con Codex local…</p>
         <div class="ExecutionControls">
+          <label
+            >PROYECTOS DETECTADOS<select id="monitorProjectSelect">
+              <option value="">Automático · último proyecto activo</option>
+            </select></label
+          >
           <label
             >PROYECTO · RUTA ABSOLUTA<input
               id="runtimeWorkspace"
               placeholder="C:\\ruta\\a\\tu\\proyecto"
           /></label>
-          <label
+          <label data-mission-control
             >PERMISOS<select id="runtimeSandbox">
               <option value="read-only">Solo lectura</option>
               <option value="workspace-write">Permitir cambios en el proyecto</option>
             </select></label
           >
-          <label
+          <label data-mission-control
             >PLANIFICACIÓN<select id="runtimePlanning">
               <option value="efficient">Solo especialistas necesarios</option>
               <option value="guided">Añadir DIRECTOR y NEXUS</option>
@@ -142,12 +158,12 @@
           >
           <button id="refreshRuntime" type="button">RECONECTAR</button>
         </div>
-        <small
+        <small data-mission-control
           >La orden se envía desde NUEVA MISIÓN, en la sala. Se ejecuta una misión cada vez. El
           presupuesto de tokens es orientativo; el consumo se recibe al terminar cada turno.</small
         >
         <details class="ExternalMonitor">
-          <summary>CODEX EN VS CODE · SESIONES DEL PROYECTO</summary>
+          <summary>VS CODE Y TERMINAL · SESIONES DEL PROYECTO</summary>
           <p>
             Una sesión externa se representa por FORGE salvo que tenga un rol reconocido o la
             vincules a otro slime. Las sesiones internas de seguridad se excluyen.

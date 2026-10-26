@@ -745,6 +745,8 @@
   }
 }
 .SlimeUnit {
+  scale: 0.8;
+  transform-origin: 29px 62px;
   will-change: left, top;
 }
 .RoomZoneLabel {

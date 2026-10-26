@@ -12,7 +12,7 @@ from fastapi import HTTPException
 
 from . import state
 from .codex_process import find_codex, login_ready, run_codex, stop_process
-from .config import PROJECT_ROOT
+from .config import PROJECT_ROOT, monitor_only
 from .execution_store import read_executions, save_execution, execution_for_request, save_execution_diffs
 from .models import DispatchRequest
 from .repository import audit_connection, save_activity_event, save_agent_registry
@@ -65,11 +65,17 @@ class ExecutionManager:
             save_agent_registry(agent)
 
     def status(self) -> dict:
+        if monitor_only():
+            from .local_monitor import default_workspace
+            return {"ready": False, "monitor_only": True, "message": "Monitor local activo. Las misiones están desactivadas en este modo.",
+                    "workspace": default_workspace(), "engine": "codex-monitor", "busy": False}
         executable = find_codex()
         ready, message = login_ready(executable) if executable else (False, "No encuentro Codex CLI. Configura AGENT_CODEX_BIN.")
         return {"ready": ready, "message": message, "workspace": str(PROJECT_ROOT), "engine": "codex-exec", "busy": bool(self.worker and self.worker.is_alive())}
 
     def start(self, request: DispatchRequest) -> dict:
+        if monitor_only():
+            raise HTTPException(409, "Esta instancia solo monitoriza. No inicia misiones ni modifica tus proyectos.")
         with self.lock, state.roster_lock:
             existing = execution_for_request(request.request_id)
             if existing:

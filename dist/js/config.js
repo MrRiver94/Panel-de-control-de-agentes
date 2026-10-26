@@ -1,4 +1,9 @@
-const API_URL = 'http://127.0.0.1:8000';
+// The portable app serves UI and API together; the developer server uses 4173.
+const localPage = globalThis.location;
+const API_URL =
+  localPage && ['http:', 'https:'].includes(localPage.protocol) && localPage.port !== '4173'
+    ? localPage.origin
+    : 'http://127.0.0.1:8000';
 
 const EffortLevels = ['low', 'medium', 'high', 'xhigh'];
 

@@ -1,6 +1,10 @@
 # AGENT ROSTER / SlimeOps
 
-Panel visual para controlar un roster de agentes reutilizables. La sala de slimes es la pantalla principal; las tareas de mayor detalle se abren en ventanas popup para no perder el contexto operativo.
+Monitor local de agentes: representa con slimes la actividad de Codex en VS Code o en la terminal, sus proyectos, estados y consumo disponible. Funciona en tu ordenador y se abre en el navegador. Codex es el primer proveedor; Anthropic todavía no está integrado.
+
+La primera distribución es una aplicación portátil de Windows con ejecutable propio. No requiere instalar Node ni Python en el equipo de uso. No necesita servidor público, cuentas de SlimeOps ni guardar credenciales del proveedor. Una extensión de VS Code queda como posible forma de acceso posterior; el monitor funciona independientemente del editor.
+
+El arranque normal utiliza el modo monitor. La ejecución de misiones se conserva como función adicional que debe habilitarse expresamente. Consulta [la aplicación local y su empaquetado](docs/LOCAL_APP.md).
 
 ## Arranque local
 
@@ -30,7 +34,7 @@ npm run start
 
 El navegador se abre automáticamente en [http://127.0.0.1:4173](http://127.0.0.1:4173). El frontend compila `dist/` al arrancar y se conecta a `http://127.0.0.1:8000`; deja ambas terminales abiertas mientras lo usas. La primera vez, si todavía no existe `backend/.venv`, créalo desde `backend` con `python -m venv .venv` y ejecuta `pip install -r requirements.txt`.
 
-El panel publicado se conecta a `http://127.0.0.1:8000`; por eso la API debe estar activa en el mismo equipo para ver telemetría, límites de Codex y auditoría real.
+En desarrollo el panel usa `http://127.0.0.1:8000`. La aplicación portátil sirve panel y API juntos en `http://127.0.0.1:47831`, siempre en el mismo equipo.
 
 ## Proveedor y modelo por agente
 

@@ -75,7 +75,7 @@ test(
     const encoded = stdout.match(/data-regression="([^"]*)"/)?.[1];
     assert.ok(encoded, `La página no terminó las comprobaciones: ${stderr.slice(-1500)}`);
     const results = JSON.parse(decodeURIComponent(encoded));
-    assert.equal(results.length, 8, JSON.stringify(results));
+    assert.equal(results.length, 10, JSON.stringify(results));
     for (const result of results) {
       await t.test(result.name, () => assert.ok(result.ok, result.error));
     }

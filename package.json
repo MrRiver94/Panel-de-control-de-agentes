@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node --preserve-symlinks-main scripts/start.mjs",
+    "package:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-windows.ps1",
     "test": "node --preserve-symlinks-main scripts/test.mjs"
   }
 }

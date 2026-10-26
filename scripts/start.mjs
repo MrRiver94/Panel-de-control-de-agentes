@@ -125,7 +125,10 @@ try {
         "8000",
         "--no-access-log",
       ],
-      { cwd: resolve(root, "backend") },
+      {
+        cwd: resolve(root, "backend"),
+        env: { ...process.env, SLIMEOPS_MONITOR_ONLY: process.env.SLIMEOPS_MONITOR_ONLY || "1" },
+      },
     );
     ownsApi = true;
     child.once("exit", (code) => {

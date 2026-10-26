@@ -13,6 +13,14 @@ from ..timeutils import now
 
 router = APIRouter()
 
+
+@router.get("/api/local-status")
+def local_monitor_status(request: Request) -> dict[str, Any]:
+    from .missions import require_local_operator
+    from ..local_monitor import local_status
+    require_local_operator(request, "dashboard.view")
+    return local_status()
+
 class SessionBinding(RequestModel):
     session_id: str = Field(min_length=1, max_length=120)
     agent_id: str | None = Field(default=None, min_length=1, max_length=120)
@@ -55,4 +63,4 @@ def codex_sessions(request: Request) -> dict[str, Any]:
     require_permission(request, "dashboard.view")
     from app.codex_sessions import get_codex_sessions
 
-    return get_codex_sessions()
+    return get_codex_sessions(external_only=True)

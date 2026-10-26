@@ -12,7 +12,9 @@ import {
   syncExecutions,
   syncRuntime,
   resetExecutionHistory,
+  missionAllowed,
 } from '../../src/js/features/executions.js';
+import { refreshLocalMonitor } from '../../src/js/features/sessions.js';
 
 const results = [];
 const $ = (selector) => document.querySelector(selector);
@@ -305,6 +307,80 @@ try {
       assert(
         document.querySelectorAll('.ExecutionRecord').length === 27,
         'El refresco perdió las páginas antiguas.',
+      );
+    },
+  );
+  await check('local diagnostics preserve manual projects and render paths as text', async () => {
+    const path = 'C:/project/<img src=x onerror=alert(1)>';
+    State.monitorWorkspace = 'C:/manual-project';
+    window.fetch = async () =>
+      response({
+        message: 'Monitor leyendo actividad local',
+        account: { message: 'CLI no disponible; sesiones locales legibles' },
+        sessions_directory: path,
+        projects: [{ name: '<img src=x>', workspace: path }],
+      });
+    await refreshLocalMonitor();
+    assert($('#localMonitorDirectory').textContent.includes(path), 'La ruta perdió su contenido.');
+    assert(
+      !$('#localMonitorDirectory').querySelector('img'),
+      'Se interpretó HTML en el diagnóstico.',
+    );
+    assert(
+      $('#monitorProjectSelect').options.length === 3,
+      'Faltan la selección automática, el proyecto detectado o el manual.',
+    );
+    assert(
+      $('#monitorProjectSelect').value === State.monitorWorkspace,
+      'Se perdió el proyecto manual.',
+    );
+    State.monitorWorkspace = '';
+  });
+  await check(
+    'monitor mode hides mission controls and never requests execution history',
+    async () => {
+      let historyRequests = 0;
+      window.fetch = async (url) => {
+        if (String(url).includes('/api/runtime'))
+          return response({
+            ready: false,
+            monitor_only: true,
+            workspace: 'C:/latest',
+            message: 'Monitor activo',
+          });
+        historyRequests += 1;
+        return response([]);
+      };
+      $('#runtimeWorkspace').value = '';
+      await syncRuntime();
+      assert(State.monitorOnly && !missionAllowed(), 'El modo monitor permite enviar misiones.');
+      assert(
+        $('#missionForm').hidden && $('#executionHistory').hidden,
+        'Se muestran controles de ejecución.',
+      );
+      assert(
+        [...document.querySelectorAll('[data-mission-control]')].every((node) => node.hidden),
+        'Se muestran permisos de escritura.',
+      );
+      assert(
+        $('#submitMission').disabled && historyRequests === 0,
+        'El monitor consultó ejecuciones o activó el envío.',
+      );
+      window.fetch = async (url) =>
+        response(
+          String(url).includes('/api/runtime')
+            ? {
+                ready: true,
+                monitor_only: false,
+                workspace: 'C:/project',
+                message: 'Codex conectado',
+              }
+            : [],
+        );
+      await syncRuntime();
+      assert(
+        !$('#missionForm').hidden && !State.monitorOnly,
+        'No se restauró el modo de ejecución adicional.',
       );
     },
   );

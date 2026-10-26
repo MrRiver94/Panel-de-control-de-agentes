@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 
 from .. import state
 from ..catalog import configured_model_catalog
-from ..config import PROJECT_ROOT
+from ..config import PROJECT_ROOT, DATA_DIRECTORY, monitor_only
 from ..models import ActivityEvent
 from ..permissions import require_permission
 from ..repository import read_activity_events
@@ -27,8 +27,10 @@ _snapshot_revision = 0
 
 
 @router.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "app": "slimeops", "version": "0.2.0", "workspace": str(PROJECT_ROOT)}
+def health() -> dict[str, Any]:
+    return {"status": "ok", "app": "slimeops", "version": "0.2.0", "workspace": str(PROJECT_ROOT),
+            "desktop": os.environ.get('SLIMEOPS_DESKTOP') == '1', "monitor_only": monitor_only(),
+            "data_directory": str(DATA_DIRECTORY)}
 
 
 @router.get("/api/dashboard")

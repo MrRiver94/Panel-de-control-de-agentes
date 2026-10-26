@@ -1,6 +1,20 @@
 .CodexSessionsPanel {
   grid-column: 1/-1;
 }
+.LocalMonitorDetails {
+  margin: 10px 0;
+  font:
+    10px/1.6 'Space Mono',
+    monospace;
+  overflow-wrap: anywhere;
+}
+.LocalMonitorDetails summary {
+  cursor: pointer;
+  color: var(--cream);
+}
+[hidden] {
+  display: none !important;
+}
 .CodexSessionsPanel > small {
   display: block;
   color: #c1d1bd;

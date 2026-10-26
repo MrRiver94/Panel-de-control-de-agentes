@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Any
 import threading
 
-from .config import PROJECT_ROOT
+from .config import DATA_DIRECTORY
 from .models import AgentState
 
 agents: dict[str, AgentState] = {
@@ -88,7 +88,7 @@ agents: dict[str, AgentState] = {
     ),
 }
 BUILTIN_AGENT_IDS = frozenset(agents)
-AUDIT_DATABASE = PROJECT_ROOT / "data" / "agent_activity.sqlite3"
+AUDIT_DATABASE = DATA_DIRECTORY / "agent_activity.sqlite3"
 # Lock order is runtime manager -> roster -> audit. Readers copy the roster while
 # holding roster_lock; writers publish their replacement only after DB commit.
 roster_lock = threading.RLock()

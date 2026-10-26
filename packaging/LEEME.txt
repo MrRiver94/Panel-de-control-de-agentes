@@ -1,0 +1,23 @@
+SlimeOps - Monitor local de Codex (Windows x64)
+
+1. Extrae TODO el ZIP en una carpeta de tu ordenador.
+2. Abre SlimeOps.exe. El panel se abre en el navegador predeterminado.
+3. Trabaja con Codex en VS Code o en una terminal. Elige el proyecto en el panel.
+4. Cierra la ventana de control de SlimeOps para detener el monitor.
+
+No necesitas instalar Python ni Node. Codex debe estar instalado por separado
+para consultar su conexión; las sesiones existentes pueden leerse sin su CLI.
+No incluyas tus credenciales en esta carpeta ni las compartas con SlimeOps.
+Anthropic todavía no está conectado.
+
+La aplicación inicia en modo monitor: no ejecuta misiones ni modifica proyectos.
+Las funciones de ejecución adicionales requieren iniciar expresamente:
+  SlimeOps.exe --enable-missions
+Para esas funciones también es necesario Git instalado en el ordenador.
+
+Datos y logs: %LOCALAPPDATA%\SlimeOps
+Panel: http://127.0.0.1:47831
+La aplicación solo escucha conexiones en tu propio ordenador.
+
+Es una versión preliminar sin firma de código. Windows puede mostrar un aviso
+de editor desconocido. Comprueba el origen del archivo antes de ejecutarlo.

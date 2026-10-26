@@ -29,6 +29,7 @@ let historyGeneration = 0;
 let historyOperator = State.operatorId;
 
 function missionAllowed() {
+  if (State.monitorOnly) return false;
   if (!State.access) return true;
   const user = State.access.users.find((item) => item.id === State.operatorId);
   const permissions =
@@ -349,11 +350,25 @@ async function syncRuntime() {
     const runtime = await fetchApi('/api/runtime');
     if (generation !== historyGeneration) return;
     State.runtimeReady = runtime.ready;
-    if (!$('#runtimeWorkspace').value)
-      $('#runtimeWorkspace').value = State.monitorWorkspace || runtime.workspace;
+    State.monitorOnly = Boolean(runtime.monitor_only);
+    document.querySelectorAll('[data-mission-control]').forEach((node) => {
+      node.hidden = State.monitorOnly;
+    });
+    $('#missionForm').hidden = State.monitorOnly;
+    $('#executionHistory').hidden = State.monitorOnly;
+    if (!$('#runtimeWorkspace').value) {
+      $('#runtimeWorkspace').value =
+        State.monitorWorkspace || (State.monitorOnly ? '' : runtime.workspace);
+      if (State.monitorOnly)
+        $('#runtimeWorkspace').placeholder = `Automático: ${runtime.workspace}`;
+    }
     $('#runtimeStatus').textContent = runtime.message;
     $('#submitMission').disabled = !runtime.ready || State.executionBusy || !missionAllowed();
-    await syncExecutions();
+    if (!State.monitorOnly) await syncExecutions();
+    else {
+      const navigation = $('#loadOlderExecutions');
+      if (navigation) navigation.hidden = true;
+    }
   } catch (error) {
     if (generation !== historyGeneration) return;
     State.runtimeReady = false;
@@ -368,17 +383,28 @@ function startExecutions() {
   $('#submitMission').disabled = true;
   $('#refreshRuntime').addEventListener('click', syncRuntime);
   $('#runtimeWorkspace').addEventListener('change', () => {
-    State.monitorWorkspace = $('#runtimeWorkspace').value.trim();
-    localStorage.setItem('slimeops-workspace', State.monitorWorkspace);
-    resetLiveContext();
-    connectLiveStream();
-    syncDashboard().catch(() => {});
+    selectMonitorWorkspace($('#runtimeWorkspace').value.trim());
+  });
+  $('#monitorProjectSelect').addEventListener('change', (event) => {
+    $('#runtimeWorkspace').value = event.target.value;
+    selectMonitorWorkspace(event.target.value);
   });
   syncRuntime();
-  setInterval(syncExecutions, 2000);
+  setInterval(() => {
+    if (!State.monitorOnly) syncExecutions();
+  }, 2000);
   setInterval(() => {
     if (!State.runtimeReady) syncRuntime();
   }, 15000);
+}
+
+function selectMonitorWorkspace(workspace) {
+  State.monitorWorkspace = workspace;
+  localStorage.setItem('slimeops-workspace', workspace);
+  $('#monitorProjectSelect').value = workspace;
+  resetLiveContext();
+  connectLiveStream();
+  syncDashboard().catch(() => {});
 }
 
 export {

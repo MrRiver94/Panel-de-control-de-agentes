@@ -9,6 +9,7 @@ import os
 import shutil
 import signal
 import subprocess
+import sys
 import threading
 import time
 
@@ -30,14 +31,45 @@ def find_codex() -> str | None:
     configured = os.getenv("AGENT_CODEX_BIN")
     if configured:
         path = Path(configured).expanduser()
-        return str(path.resolve()) if path.is_file() and path.suffix.lower() not in {".cmd", ".bat", ".ps1"} else None
+        try:
+            return str(path.resolve()) if path.is_file() and path.suffix.lower() not in {".cmd", ".bat", ".ps1"} else None
+        except OSError:
+            return None
     executable = shutil.which("codex.exe" if os.name == "nt" else "codex")
     if executable:
         return executable
-    # Codex installed by the VS Code extension may not be in the API's PATH.
-    root = Path(codex_environment()["HOME"]) / ".vscode" / "extensions"
-    candidates = list(root.glob("openai.chatgpt-*/bin/windows-*/codex.exe")) if os.name == "nt" else []
-    return str(max(candidates, key=lambda path: path.stat().st_mtime)) if candidates else None
+    # An app opened by Explorer may not inherit the IDE's updated PATH.
+    home = Path(codex_environment()["HOME"])
+    candidates: list[Path] = []
+    if os.name == 'nt':
+        roots = [home / '.vscode' / 'extensions', home / '.vscode-insiders' / 'extensions']
+        npm_roots = [Path(os.environ.get('APPDATA', home / 'AppData' / 'Roaming')) / 'npm' / 'node_modules' / '@openai']
+        shim = shutil.which('codex.cmd')
+        if shim:
+            npm_roots.append(Path(shim).parent / 'node_modules' / '@openai')
+        patterns = [(root, 'openai.chatgpt-*/bin/windows-*/codex.exe') for root in roots]
+        for root in npm_roots:
+            patterns.extend([(root, 'codex/vendor/*/codex/codex.exe'),
+                             (root, 'codex/node_modules/@openai/codex-*/vendor/*/codex/codex.exe'),
+                             (root, 'codex-*/vendor/*/codex/codex.exe')])
+    else:
+        platform = 'darwin-*' if sys.platform == 'darwin' else 'linux-*'
+        patterns = [(home / directory / 'extensions', f'openai.chatgpt-*/bin/{platform}/codex')
+                    for directory in ('.vscode', '.vscode-insiders')]
+        candidates.append(home / '.local' / 'bin' / 'codex')
+    for root, pattern in patterns:
+        try:
+            candidates.extend(root.glob(pattern))
+        except OSError:
+            continue
+    available = []
+    for candidate in candidates:
+        try:
+            if candidate.is_file():
+                available.append((candidate.stat().st_mtime, str(candidate)))
+        except OSError:
+            continue
+    return max(available)[1] if available else None
 
 
 def login_ready(executable: str) -> tuple[bool, str]:

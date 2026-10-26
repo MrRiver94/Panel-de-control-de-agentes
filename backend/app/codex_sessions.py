@@ -14,7 +14,8 @@ MAX_SESSIONS = 40
 TAIL_BYTES = 2_000_000
 _cache: dict[str, Any] | None = None
 _cache_at = 0.0
-_project_cache: dict[tuple[str, str], tuple[float, dict]] = {}
+_project_cache: dict[tuple[str, str, bool], tuple[float, dict]] = {}
+_headers: dict[str, tuple[tuple[int, int], tuple[str | None, str]]] = {}
 _session_lock = threading.RLock()
 
 
@@ -27,6 +28,8 @@ def _recent_rollouts(limit: int | None = MAX_SESSIONS) -> list[Path]:
     root = _sessions_root()
     if not root.is_dir():
         return []
+    with os.scandir(root):
+        pass  # Surface a denied directory instead of reporting an empty history.
     paths = []
     for path in root.rglob("rollout-*.jsonl"):
         try:
@@ -43,9 +46,14 @@ def _normalized_workspace(value: str) -> str:
     return value.casefold() if os.name == "nt" or (len(value) > 1 and value[1] == ":") else value
 
 
-def _matches_workspace(path: Path, root: str) -> bool:
-    """Read only bounded metadata until the project is known, not every tail."""
+def _header_identity(path: Path) -> tuple[str | None, str]:
+    """Cache only project/source identity, never instructions from metadata."""
     try:
+        stat = path.stat()
+        signature = (stat.st_mtime_ns, stat.st_size)
+        cached = _headers.get(str(path))
+        if cached and cached[0] == signature:
+            return cached[1]
         with path.open("rb") as stream:
             header = stream.read(65536).decode("utf-8", errors="replace")
         for line in header.splitlines():
@@ -57,13 +65,23 @@ def _matches_workspace(path: Path, root: str) -> bool:
                 continue
             payload = record.get("payload")
             cwd = payload.get("cwd") if isinstance(payload, dict) else None
-            if not isinstance(cwd, str):
-                return False
-            cwd = _normalized_workspace(cwd)
-            return cwd == root or cwd.startswith(root + "/")
+            source = payload.get('source') if isinstance(payload, dict) else None
+            if not isinstance(source, str):
+                subagent = source.get('subagent') if isinstance(source, dict) else None
+                source = 'subagent' if isinstance(subagent, dict) and isinstance(subagent.get('thread_spawn'), dict) else 'internal'
+            result = (_normalized_workspace(cwd) if isinstance(cwd, str) else None, source)
+            _headers[str(path)] = (signature, result)
+            if len(_headers) > 2048:
+                _headers.pop(next(iter(_headers)))
+            return result
     except OSError:
         pass
-    return False
+    return None, 'unknown'
+
+
+def _matches_workspace(path: Path, root: str) -> bool:
+    cwd, _ = _header_identity(path)
+    return cwd is not None and (cwd == root or cwd.startswith(root + '/'))
 
 
 def _read_rollout(path: Path, mtime: float) -> dict[str, Any] | None:
@@ -71,20 +89,29 @@ def _read_rollout(path: Path, mtime: float) -> dict[str, Any] | None:
     return read_session(path, mtime)
 
 
-def get_codex_sessions(workspace: str | None = None) -> dict[str, Any]:
+def get_codex_sessions(workspace: str | None = None, *, external_only: bool = False) -> dict[str, Any]:
     with _session_lock:
-        return _get_codex_sessions(workspace)
+        return _get_codex_sessions(workspace, external_only=external_only)
 
 
-def _get_codex_sessions(workspace: str | None = None) -> dict[str, Any]:
+def _get_codex_sessions(workspace: str | None = None, *, external_only: bool = False) -> dict[str, Any]:
     global _cache, _cache_at
     root = _normalized_workspace(workspace) if workspace else None
-    key = (str(_sessions_root()), root or "")
+    key = (str(_sessions_root()), root or "", external_only)
     cached = _project_cache.get(key)
     if cached and time.monotonic() - cached[0] < 2:
         return cached[1]
     sessions = []
-    for path in _recent_rollouts(limit=None if root else MAX_SESSIONS):
+    scan_status = 'empty'
+    try:
+        paths = _recent_rollouts(limit=None if root or external_only else MAX_SESSIONS)
+        scan_status = 'empty' if _sessions_root().is_dir() else 'missing'
+    except OSError:
+        paths = []
+        scan_status = 'unreadable'
+    for path in paths:
+        if external_only and _header_identity(path)[1] not in {'vscode', 'cli', 'subagent'}:
+            continue
         if root and not _matches_workspace(path, root):
             continue
         try:
@@ -96,7 +123,7 @@ def _get_codex_sessions(workspace: str | None = None) -> dict[str, Any]:
             sessions.append(session)
             if len(sessions) >= MAX_SESSIONS:
                 break
-    result = {"available": bool(sessions), "sessions": sessions}
+    result = {"available": bool(sessions), "sessions": sessions, "status": 'ready' if sessions else scan_status}
     _project_cache[key] = (time.monotonic(), result)
     if len(_project_cache) > 12:
         _project_cache.pop(next(iter(_project_cache)))

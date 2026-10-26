@@ -1,0 +1,46 @@
+name: Build local Windows application
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Install application and build dependencies
+        run: |
+          python -m venv backend/.venv
+          backend/.venv/Scripts/python.exe -m pip install -r backend/requirements.txt -r backend/requirements-build.txt
+          npm ci --prefix frontend
+      - name: Build portable app and check its startup
+        run: ./scripts/package-windows.ps1
+      - name: Test application
+        env:
+          SLIMEOPS_REQUIRE_BROWSER: '1'
+        run: node --preserve-symlinks --preserve-symlinks-main scripts/test.mjs
+      - name: Check generated frontend and formatting
+        run: |
+          node --preserve-symlinks --preserve-symlinks-main frontend/build.mjs --check
+          npm run format:check --prefix frontend
+      - uses: actions/upload-artifact@v7
+        with:
+          name: SlimeOps-Windows-x64
+          path: |
+            releases/SlimeOps-Windows-x64.zip
+            releases/SlimeOps-Windows-x64.zip.sha256
+          if-no-files-found: error
+          retention-days: 14

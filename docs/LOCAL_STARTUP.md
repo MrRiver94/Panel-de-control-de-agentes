@@ -6,7 +6,9 @@ Desde la raíz del repositorio:
 npm start
 ```
 
-Se compila `dist`, se inicia la API en `127.0.0.1:8000`, se inicia el front en `127.0.0.1:4173` y se abre el navegador. La terminal permanece abierta. `Ctrl+C` cierra únicamente los servicios iniciados desde ella. Si inició una API con una misión activa, solicita su cancelación antes de cerrar.
+Se compila `dist`, se inicia la API en `127.0.0.1:8000`, se inicia el front en `127.0.0.1:4173` y se abre el navegador. El modo predeterminado es monitor; para habilitar las misiones define `SLIMEOPS_MONITOR_ONLY=0` antes de arrancar con los servicios anteriores cerrados. La terminal permanece abierta. `Ctrl+C` cierra únicamente los servicios iniciados desde ella. Si inició una API con una misión activa, solicita su cancelación antes de cerrar.
+
+Para usar el ejecutable sin instalar Python ni Node, consulta [la aplicación local](LOCAL_APP.md).
 
 Los servicios de SlimeOps ya abiertos se reutilizan cuando identifican el mismo checkout. Un servicio desconocido, otra copia del proyecto o una API antigua ocupando esos puertos provoca un error explicativo; el lanzador no lo detiene. En ese caso, cierra la instancia antigua desde su terminal y vuelve a arrancar.
 

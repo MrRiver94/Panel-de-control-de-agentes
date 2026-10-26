@@ -1,5 +1,15 @@
 # Registro de cambios
 
+## 2026-10-26 — Monitor local y aplicación portátil de Windows
+
+- Alcance centrado en observar Codex desde VS Code o terminal, con Anthropic pendiente.
+- Diagnóstico de sesiones y conexión separados, selector de proyectos detectados y seguimiento automático del proyecto externo más reciente.
+- Exclusión de sesiones internas antes del límite, caché de metadatos y detección del binario fuera del PATH de la aplicación.
+- Modo monitor predeterminado en el lanzador y ejecutable: controles de misiones ocultos y nuevos envíos rechazados por el backend.
+- Entrada local Python que sirve panel y API juntos, ventana para abrir/cerrar y bloqueo de orígenes remotos.
+- Empaquetado portátil de Windows con runtime y licencias; datos de usuario fuera de la instalación. Guía y aceptación externa pendiente en [LOCAL_APP.md](LOCAL_APP.md).
+- Slimes del mapa reducidos un 20 % conservando el anclaje de movimiento.
+
 ## 2026-10-26 — Correcciones de seguridad, integridad y sincronización
 
 - Corregidos los 18 hallazgos de la revisión: HTML literal en accesos, plazo de app-server, transacciones y locks del roster, validación y conflictos HTTP coherentes.

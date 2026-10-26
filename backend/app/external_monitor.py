@@ -6,7 +6,6 @@ import time
 
 from . import state
 from .codex_sessions import get_codex_sessions
-from .config import PROJECT_ROOT
 from .repository import audit_connection
 
 _cache: dict[tuple[str,str],tuple[float,list[dict]]] = {}
@@ -31,7 +30,8 @@ def session_agent(session: dict, bindings: dict[str, str]) -> str:
 
 
 def external_sessions(workspace: str | None = None) -> list[dict]:
-    root = normalized_path(workspace or str(PROJECT_ROOT))
+    from .local_monitor import default_workspace
+    root = normalized_path(workspace or default_workspace())
     cache_key=(str(state.AUDIT_DATABASE),root)
     cached=_cache.get(cache_key)
     if cached and time.monotonic()-cached[0]<2:
@@ -41,7 +41,7 @@ def external_sessions(workspace: str | None = None) -> list[dict]:
         rows = connection.execute("SELECT session_id AS id FROM execution_sessions").fetchall()
     managed = {row["id"] for row in rows if row["id"]}
     result = []
-    for session in get_codex_sessions(workspace=root)["sessions"]:
+    for session in get_codex_sessions(workspace=root, external_only=True)["sessions"]:
         cwd = normalized_path(session.get("workspace") or "")
         if session["id"] in managed or session.get("source") not in {'vscode','cli','subagent'} or not cwd:
             continue

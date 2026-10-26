@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 
-from .config import PROJECT_ROOT
+from .config import DATA_DIRECTORY
 from .git_local import git_environment
 
 
@@ -40,7 +40,7 @@ class WorkspaceState:
 class WorkspaceTransaction:
     def __init__(self, workspace: str | Path, storage_root: str | Path | None = None) -> None:
         self.workspace = Path(workspace).expanduser().resolve()
-        self.storage_root = Path(storage_root or PROJECT_ROOT / 'data' / 'workspaces').expanduser().resolve()
+        self.storage_root = Path(storage_root or DATA_DIRECTORY / 'workspaces').expanduser().resolve()
         self.identifier = uuid4().hex
         self.directory = self.storage_root / self.identifier
         self.repository = self.directory / 'repository'
