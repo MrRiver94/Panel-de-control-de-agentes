@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from uuid import uuid4
+from copy import deepcopy
 import json
 import logging
 import threading
@@ -14,27 +15,33 @@ from .codex_process import find_codex, login_ready, run_codex, stop_process
 from .config import PROJECT_ROOT
 from .execution_store import read_executions, save_execution, execution_for_request, save_execution_diffs
 from .models import DispatchRequest
-from .repository import save_activity_event, save_agent_registry
+from .repository import audit_connection, save_activity_event, save_agent_registry
 from .timeutils import now
 from .execution_diff import capture_baseline, collect_diffs
 from .review import parse_review
 from .mission_plan import choose_agents, build_prompt
+from .workspace_transaction import WorkspaceTransaction, WorkspaceConflictError, WorkspaceTransactionError
 
 ACTIVE = {"queued", "running", "cancelling"}
 LOGGER = logging.getLogger(__name__)
 
 
 class ExecutionManager:
-    def __init__(self) -> None:
+    def __init__(self, workspace_storage: Path | None = None) -> None:
         self.lock = threading.RLock()
         self.cancelled = threading.Event()
         self.worker: threading.Thread | None = None
         self.process = None
         self.current: dict | None = None
         self.stopping = False
+        self.workspace_storage = workspace_storage
 
     def recover(self) -> None:
         """Never replay an interrupted mission or revive prototype running states."""
+        with state.roster_lock:
+            self._recover()
+
+    def _recover(self) -> None:
         history = read_executions(10000)
         measured = {}
         for execution in history:
@@ -63,7 +70,7 @@ class ExecutionManager:
         return {"ready": ready, "message": message, "workspace": str(PROJECT_ROOT), "engine": "codex-exec", "busy": bool(self.worker and self.worker.is_alive())}
 
     def start(self, request: DispatchRequest) -> dict:
-        with self.lock:
+        with self.lock, state.roster_lock:
             existing = execution_for_request(request.request_id)
             if existing:
                 workspace = str(Path(request.workspace or PROJECT_ROOT).expanduser().resolve())
@@ -88,7 +95,7 @@ class ExecutionManager:
             if any(state.agents[key].provider != "codex" for key in chosen):
                 raise HTTPException(400, "Esta ejecución utiliza Codex. Cambia a Codex el proveedor de los agentes seleccionados.")
             execution = {
-                "id": str(uuid4()), "prompt": request.prompt, "workspace": str(workspace),
+                "id": str(uuid4()), "schema_version": 1, "prompt": request.prompt, "workspace": str(workspace),
                 "request_id": request.request_id, "planning": request.planning,
                 "sandbox": request.sandbox, "status": "queued", "created_at": now().isoformat(),
                 "finished_at": None, "error": None, "active_agent": None,
@@ -110,18 +117,40 @@ class ExecutionManager:
                 "plan":"Misión registrada. Turnos: " + " → ".join(step['name'] for step in execution['steps'])}
 
     def _agent_state(self, key: str, status: str, detail: str, action: str | None = None) -> None:
-        agent = state.agents[key]
-        agent.status, agent.current_task, agent.work_action = status, detail[:120], action
-        save_agent_registry(agent)
+        with state.roster_lock:
+            agent = state.agents[key].model_copy(deep=True)
+            agent.status, agent.current_task, agent.work_action = status, detail[:120], action
+            save_agent_registry(agent)
+            state.agents[key] = agent
 
     def _event(self, execution: dict, step: dict, event: dict) -> None:
+        with self.lock, state.roster_lock:
+            original_step = deepcopy(step)
+            original_agent = state.agents[step["agent_id"]]
+            agent = original_agent.model_copy(deep=True)
+            audit = []
+            try:
+                self._apply_event(agent, step, event, audit)
+                if not audit and step == original_step and agent == original_agent:
+                    return
+                with state.audit_lock, audit_connection() as connection:
+                    for kind, message, input_tokens, output_tokens in audit:
+                        save_activity_event(agent.id, agent.name, kind, message,
+                                            input_tokens, output_tokens, connection=connection)
+                    save_agent_registry(agent, connection)
+                    save_execution(execution, connection)
+                state.agents[agent.id] = agent
+            except Exception:
+                step.clear()
+                step.update(original_step)
+                raise
+
+    def _apply_event(self, agent, step: dict, event: dict, audit: list) -> None:
         kind = event.get("type")
-        agent = state.agents[step["agent_id"]]
         if kind == "thread.started":
             step["session_id"] = agent.session_id = event.get("thread_id")
-            save_agent_registry(agent)
         elif kind == "turn.started":
-            self._agent_state(agent.id, "thinking", "Codex está procesando la misión", "thinking")
+            agent.status, agent.current_task, agent.work_action = "thinking", "Codex está procesando la misión", "thinking"
         elif kind == "turn.completed":
             step["turn_completed"] = True
             # Cached input is part of input; reasoning is part of output. Never add them twice.
@@ -131,8 +160,7 @@ class ExecutionManager:
                 previous = step.get("usage") or {key: 0 for key in measured}
                 step["usage"] = {key: previous[key] + measured[key] for key in measured}
                 agent.tokens_used += measured["input_tokens"] + measured["output_tokens"]
-                save_activity_event(agent.id, agent.name, "codex_usage", "Consumo medido por Codex (razonamiento incluido en salida).", measured["input_tokens"], measured["output_tokens"])
-                save_agent_registry(agent)
+                audit.append(("codex_usage", "Consumo medido por Codex (razonamiento incluido en salida).", measured["input_tokens"], measured["output_tokens"]))
         elif kind == "turn.failed":
             raise RuntimeError("Codex ha marcado el turno como fallido. Revisa la sesión y la configuración del modelo.")
         elif kind in {"item.started", "item.updated", "item.completed"}:
@@ -147,36 +175,55 @@ class ExecutionManager:
                        "agent_message": ("running", "writing", "Redactando el resultado")}
             if item_type in actions:
                 status, action, detail = actions[item_type]
-                self._agent_state(agent.id, status, detail, action)
+                agent.status, agent.current_task, agent.work_action = status, detail, action
             if kind == "item.started" and item_type in {"command_execution", "file_change", "web_search", "mcp_tool_call"}:
-                save_activity_event(agent.id, agent.name, "codex_" + item_type, actions[item_type][2])
+                audit.append(("codex_" + item_type, actions[item_type][2], 0, 0))
             if kind == "item.completed" and item_type == "agent_message":
                 step["result"] = str(item.get("text", ""))[:30000]
         # Do not expose reasoning text, raw tools or command output.
-        save_execution(execution)
 
     def _run(self, executable: str, execution: dict) -> None:
-        execution["status"] = "running"
+        with self.lock:
+            execution["status"] = "running"
         context: list[str] = []
         active = None
+        transaction = None
+        transaction_ready = False
+        terminal_status = "failed"
+        working_directory = execution["workspace"]
         try:
             for step in execution["steps"]:
                 if self.cancelled.is_set():
                     raise InterruptedError("Ejecución cancelada.")
                 active = step
                 key = step["agent_id"]
-                execution["active_agent"], step["status"] = key, "running"
-                agent = state.agents[key]
-                agent.tokens_used = 0
-                agent.session_id = None
-                agent.execution_id = execution["id"]
-                self._agent_state(key, "running", "Iniciando Codex", "planning")
-                save_activity_event(key, agent.name, "mission_dispatched", "Inicio real de Codex: " + execution["id"])
-                save_execution(execution)
+                with self.lock, state.roster_lock:
+                    if self.cancelled.is_set():
+                        raise InterruptedError("Ejecución cancelada.")
+                    execution["active_agent"], step["status"] = key, "running"
+                    agent = state.agents[key].model_copy(deep=True)
+                    agent.tokens_used, agent.session_id, agent.execution_id = 0, None, execution["id"]
+                    agent.status, agent.current_task, agent.work_action = "running", "Iniciando Codex", "planning"
+                    with state.audit_lock, audit_connection() as connection:
+                        save_agent_registry(agent, connection)
+                        save_activity_event(key, agent.name, "mission_dispatched", "Inicio real de Codex: " + execution["id"], connection=connection)
+                        save_execution(execution, connection)
+                    state.agents[key] = agent
                 prompt = build_prompt(execution, step, context)
                 step['prompt_chars'] = len(prompt)
                 sandbox = execution["sandbox"] if key == "forge" else "read-only"
-                args = [executable, "exec", "--json", "--color", "never", "-C", execution["workspace"],
+                if sandbox == "workspace-write":
+                    transaction = WorkspaceTransaction(execution["workspace"], self.workspace_storage)
+                    working_directory = transaction.prepare()
+                    transaction_ready = True
+                    execution["workspace_mode"] = "isolated"
+                    execution["recovery_workspace"] = transaction.recovery_path
+                    save_execution(execution)
+                if transaction is not None:
+                    prompt += ("\nTrabaja dentro del directorio actual: es una copia aislada del proyecto, "
+                               "con su contenido previo y sin dependencias ignoradas. No escribas en el proyecto original. "
+                               "El panel aplicará los cambios al finalizar solo si el original conserva su estado inicial.")
+                args = [executable, "exec", "--json", "--color", "never", "-C", working_directory,
                         "--sandbox", sandbox, "-c", 'approval_policy="never"',
                         "-c", "model_reasoning_effort=" + json.dumps(step["effort"])]
                 if step["model"]:
@@ -184,13 +231,15 @@ class ExecutionManager:
                 if key == 'sentinel':
                     args += ['--output-schema', str(PROJECT_ROOT/'runtime/schemas/review.json')]
                 args.append("-")
-                before = capture_baseline(execution["workspace"]) if sandbox == "workspace-write" else None
+                before = capture_baseline(working_directory) if sandbox == "workspace-write" else None
                 try:
-                    run_codex(args, prompt, execution["workspace"], self.cancelled,
+                    if self.cancelled.is_set():
+                        raise InterruptedError("Ejecución cancelada.")
+                    run_codex(args, prompt, working_directory, self.cancelled,
                               lambda event: self._event(execution, step, event), self._set_process)
                 finally:
                     if before is not None:
-                        diffs = collect_diffs(execution["workspace"], before)
+                        diffs = collect_diffs(working_directory, before)
                         save_execution_diffs(execution['id'], diffs)
                         step["changed_files"] = [item['path'] for item in diffs]
                         execution["changed_files"] = sorted(set(execution["changed_files"]) | set(step["changed_files"]))
@@ -209,31 +258,54 @@ class ExecutionManager:
                 if self.cancelled.is_set():
                     raise InterruptedError("Ejecución cancelada.")
                 if execution["sandbox"] == "workspace-write" and not execution["changed_files"]:
-                    execution["status"] = "no_changes"
+                    terminal_status = "no_changes"
                     execution["outcome"] = "Codex terminó sus turnos, pero no se detectaron cambios en los archivos. Revisa la respuesta de FORGE."
                 else:
                     review=next((step.get('review') for step in execution['steps'] if step['agent_id']=='sentinel'),None)
-                    execution["status"] = 'needs_review' if execution['sandbox']=='workspace-write' and (not review or review['verdict']!='approved') else "completed"
-                    execution["outcome"] = ("Cambios generados con observaciones; revisa SENTINEL." if execution['status']=='needs_review' else "Cambios generados y revisados por SENTINEL; comprueba el resultado final." if execution["sandbox"] == "workspace-write" else "Propuesta de solo lectura finalizada; no se han solicitado cambios en archivos.")
+                    terminal_status = 'needs_review' if execution['sandbox']=='workspace-write' and (not review or review['verdict']!='approved') else "completed"
+                    execution["outcome"] = ("Cambios generados con observaciones; revisa SENTINEL." if terminal_status=='needs_review' else "Cambios generados y revisados por SENTINEL; comprueba el resultado final." if execution["sandbox"] == "workspace-write" else "Propuesta de solo lectura finalizada; no se han solicitado cambios en archivos.")
         except InterruptedError:
-            execution["status"], execution["error"] = "cancelled", "Misión cancelada. Los cambios ya realizados se conservan."
+            terminal_status, execution["error"] = "cancelled", "Misión cancelada. Los cambios ya realizados se conservan."
         except Exception as error:
             LOGGER.exception('Fallo en la ejecución %s', execution['id'])
-            execution["status"] = "cancelled" if self.cancelled.is_set() else "failed"
+            terminal_status = "cancelled" if self.cancelled.is_set() else "failed"
             execution["error"] = ("Misión cancelada. Los cambios ya realizados se conservan." if self.cancelled.is_set()
                                   else str(error)[:500] if isinstance(error, RuntimeError)
                                   else "No se pudo ejecutar Codex. Revisa configuración y permisos de la API.")
         finally:
-            if active and active["status"] == "running":
-                active["status"] = execution["status"]
-                key = active["agent_id"]
-                self._agent_state(key, "error" if execution["status"] == "failed" else "standby", execution["error"] or "En espera")
-                save_activity_event(key, state.agents[key].name, "codex_error" if execution["status"] == "failed" else "codex_cancelled", execution["error"] or "Finalizado")
-            for step in execution["steps"]:
-                if step["status"] == "queued":
-                    step["status"] = "skipped"
-            execution.update(active_agent=None, finished_at=now().isoformat())
-            save_execution(execution)
+            if transaction is not None and transaction.recovery_path and not transaction_ready:
+                execution["recovery_workspace"] = transaction.recovery_path
+            if transaction is not None and transaction_ready:
+                try:
+                    transaction.publish()
+                    execution["publication_status"] = "applied"
+                    execution["recovery_workspace"] = None
+                    try:
+                        transaction.cleanup()
+                    except (OSError, WorkspaceTransactionError):
+                        LOGGER.exception('No se pudo retirar la copia aislada de %s', execution['id'])
+                        execution["recovery_workspace"] = transaction.recovery_path
+                except (OSError, WorkspaceTransactionError) as error:
+                    execution["publication_status"] = "conflict" if isinstance(error, WorkspaceConflictError) else "failed"
+                    terminal_status = "needs_review"
+                    execution["recovery_workspace"] = transaction.recovery_path
+                    execution["error"] = str(error)[:500]
+                    execution["outcome"] = "La publicación no terminó. Revisa el proyecto y la copia de recuperación antes de aplicar los cambios."
+            with self.lock:
+                if self.cancelled.is_set() and terminal_status != "needs_review":
+                    terminal_status = "cancelled"
+                    execution["error"] = "Misión cancelada. Los cambios ya realizados se conservan."
+                execution["status"] = terminal_status
+                if active and active["status"] == "running":
+                    active["status"] = terminal_status
+                    key = active["agent_id"]
+                    self._agent_state(key, "error" if terminal_status == "failed" else "standby", execution["error"] or "En espera")
+                    save_activity_event(key, state.agents[key].name, "codex_error" if terminal_status == "failed" else "codex_cancelled", execution["error"] or "Finalizado")
+                for step in execution["steps"]:
+                    if step["status"] == "queued":
+                        step["status"] = "skipped"
+                execution.update(active_agent=None, finished_at=now().isoformat())
+                save_execution(execution)
 
     def _set_process(self, process) -> None:
         with self.lock:

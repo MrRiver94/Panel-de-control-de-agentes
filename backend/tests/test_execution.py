@@ -28,7 +28,7 @@ class ExecutionTests(TestCase):
         db = patch.object(state,'AUDIT_DATABASE',self.root/'test.sqlite3'); db.start(); self.addCleanup(db.stop)
         for agent in state.agents.values(): agent.provider='codex'
         create_audit_schema(); create_execution_schema()
-        self.manager=ExecutionManager(); self.addCleanup(self.manager.shutdown)
+        self.manager=ExecutionManager(workspace_storage=self.root/'isolated'); self.addCleanup(self.manager.shutdown)
         for target,value in [('app.execution.find_codex','codex'),('app.execution.login_ready',(True,'ready'))]:
             p=patch(target,return_value=value); p.start(); self.addCleanup(p.stop)
 
@@ -68,11 +68,11 @@ class ExecutionTests(TestCase):
         self.assertIn('forge',[step['agent_id'] for step in result['steps']])
 
     def test_edits_are_recorded_even_when_transport_fails(self):
-        def failing(args,*rest):
+        def failing(args,prompt,workspace,*rest):
             if 'workspace-write' in args:
-                (self.workspace/'app.txt').write_text('changed',encoding='utf-8')
+                (Path(workspace)/'app.txt').write_text('changed',encoding='utf-8')
                 raise RuntimeError('fixture failure')
-            self.fake(args,*rest)
+            self.fake(args,prompt,workspace,*rest)
         with patch('app.execution.run_codex',side_effect=failing):
             result=self.finish(self.manager.start(self.request('workspace-write')))
         self.assertEqual(result['status'],'failed')
@@ -117,7 +117,7 @@ class ExecutionTests(TestCase):
     def run_write_review(self, verdict):
         def transport(args,prompt,workspace,cancelled,event,on_process):
             if 'workspace-write' in args:
-                (self.workspace/'app.txt').write_text('implemented',encoding='utf-8')
+                (Path(workspace)/'app.txt').write_text('implemented',encoding='utf-8')
             result=json.dumps({'verdict':verdict,'summary':'fixture review','findings':[]}) if '--output-schema' in args else 'implemented'
             event({'type':'item.completed','item':{'type':'agent_message','text':result}})
             event({'type':'turn.completed','usage':{'input_tokens':10,'output_tokens':2}})
@@ -135,3 +135,82 @@ class ExecutionTests(TestCase):
     def test_review_with_observations_is_not_reported_as_fully_completed(self):
         result=self.run_write_review('changes_requested')
         self.assertEqual(result['status'],'needs_review')
+
+    def test_external_edit_is_preserved_and_generated_changes_have_recovery_copy(self):
+        def transport(args, prompt, workspace, cancelled, event, on_process):
+            if 'workspace-write' in args:
+                self.assertNotEqual(Path(workspace), self.workspace)
+                (Path(workspace)/'app.txt').write_text('generated only', encoding='utf-8')
+                (self.workspace/'app.txt').write_text('external edit', encoding='utf-8')
+            result = json.dumps({'verdict':'approved', 'summary':'review', 'findings':[]}) if '--output-schema' in args else 'done'
+            event({'type':'item.completed','item':{'type':'agent_message','text':result}})
+            event({'type':'turn.completed','usage':{'input_tokens':1,'output_tokens':1}})
+        with patch('app.execution.run_codex', side_effect=transport):
+            result = self.finish(self.manager.start(self.request('workspace-write')))
+        self.assertEqual(result['status'], 'needs_review')
+        self.assertEqual(result['publication_status'], 'conflict')
+        self.assertEqual((self.workspace/'app.txt').read_text(encoding='utf-8'), 'external edit')
+        self.assertEqual((Path(result['recovery_workspace'])/'app.txt').read_text(encoding='utf-8'), 'generated only')
+        from app.execution_store import read_execution_diffs
+        self.assertIn('+generated only', read_execution_diffs(result['id'])[0]['patch'])
+        self.assertNotIn('+external edit', read_execution_diffs(result['id'])[0]['patch'])
+
+    def test_write_publishes_only_after_review_and_cleans_successful_copy(self):
+        def transport(args, prompt, workspace, cancelled, event, on_process):
+            if 'workspace-write' in args:
+                (Path(workspace)/'app.txt').write_text('new isolated', encoding='utf-8')
+            if '--output-schema' in args:
+                self.assertEqual((self.workspace/'app.txt').read_text(encoding='utf-8'), 'original')
+                self.assertEqual((Path(workspace)/'app.txt').read_text(encoding='utf-8'), 'new isolated')
+            result = json.dumps({'verdict':'approved','summary':'review','findings':[]}) if '--output-schema' in args else 'done'
+            event({'type':'item.completed','item':{'type':'agent_message','text':result}})
+            event({'type':'turn.completed','usage':{'input_tokens':1,'output_tokens':1}})
+        with patch('app.execution.run_codex', side_effect=transport):
+            result = self.finish(self.manager.start(self.request('workspace-write')))
+        self.assertEqual(result['status'], 'completed')
+        self.assertEqual(result['publication_status'], 'applied')
+        self.assertIsNone(result['recovery_workspace'])
+        self.assertEqual((self.workspace/'app.txt').read_text(encoding='utf-8'), 'new isolated')
+        self.assertFalse(list((self.root/'isolated').iterdir()))
+
+    def test_cancel_during_preparation_does_not_launch_a_writing_turn(self):
+        from app.workspace_transaction import WorkspaceTransaction
+        prepare = WorkspaceTransaction.prepare
+        entered, release = threading.Event(), threading.Event()
+        def preparing(transaction):
+            workspace = prepare(transaction)
+            entered.set()
+            release.wait(5)
+            return workspace
+        with patch('app.execution.WorkspaceTransaction.prepare', preparing), patch('app.execution.run_codex', side_effect=self.fake) as transport:
+            request = self.manager.start(self.request('workspace-write'))
+            self.assertTrue(entered.wait(5))
+            self.manager.cancel(request['execution_id'])
+            release.set()
+            result = self.finish(request)
+        self.assertEqual(result['status'], 'cancelled')
+        self.assertFalse(any('workspace-write' in call.args[0] for call in transport.call_args_list))
+
+    def test_mission_remains_active_and_cancelable_until_publication_finishes(self):
+        from app.workspace_transaction import WorkspaceTransaction
+        publish = WorkspaceTransaction.publish
+        entered, release = threading.Event(), threading.Event()
+        def publishing(transaction):
+            entered.set()
+            release.wait(5)
+            return publish(transaction)
+        def transport(args, prompt, workspace, cancelled, event, on_process):
+            if 'workspace-write' in args:
+                (Path(workspace)/'app.txt').write_text('generated', encoding='utf-8')
+            text = json.dumps({'verdict':'approved','summary':'review','findings':[]}) if '--output-schema' in args else 'done'
+            event({'type':'item.completed','item':{'type':'agent_message','text':text}})
+            event({'type':'turn.completed','usage':{'input_tokens':1,'output_tokens':1}})
+        with patch('app.execution.WorkspaceTransaction.publish', publishing), patch('app.execution.run_codex', side_effect=transport):
+            request = self.manager.start(self.request('workspace-write'))
+            self.assertTrue(entered.wait(5))
+            self.assertEqual(self.manager.current['status'], 'running')
+            self.assertEqual(read_execution(request['execution_id'])['status'], 'running')
+            self.manager.cancel(request['execution_id'])
+            release.set()
+            result = self.finish(request)
+        self.assertEqual(result['status'], 'cancelled')

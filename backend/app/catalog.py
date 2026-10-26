@@ -27,7 +27,8 @@ def configured_model_catalog() -> dict[str, list[str]]:
             ):
                 raise ValueError(f"Invalid model list for {provider}")
             catalog[provider] = list(dict.fromkeys(models))
-    for agent in state.agents.values():
-        if agent.model and agent.model not in catalog[agent.provider]:
-            catalog[agent.provider].append(agent.model)
+    with state.roster_lock:
+        for agent in state.agents.values():
+            if agent.model and agent.model not in catalog[agent.provider]:
+                catalog[agent.provider].append(agent.model)
     return catalog

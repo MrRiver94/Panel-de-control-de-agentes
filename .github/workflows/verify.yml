@@ -1,0 +1,44 @@
+name: Verify application
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Create isolated Python environment
+        run: python -m venv backend/.venv
+      - name: Install locked dependencies
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            backend/.venv/Scripts/python.exe -m pip install -r backend/requirements.txt
+          else
+            backend/.venv/bin/python -m pip install -r backend/requirements.txt
+          fi
+      - run: npm ci --prefix frontend
+      - name: Test backend, frontend and DOM
+        env:
+          SLIMEOPS_REQUIRE_BROWSER: '1'
+        run: node --preserve-symlinks --preserve-symlinks-main scripts/test.mjs
+      - name: Check generated artifact
+        run: node --preserve-symlinks --preserve-symlinks-main frontend/build.mjs --check
+      - run: npm run format:check --prefix frontend

@@ -26,9 +26,9 @@ function modelsFor(provider) {
 function renderControlPanel() {
   const agent = getSelectedAgent();
   const draft = getControlDraft(agent);
-  $('#agentSelect').innerHTML = State.agents
-    .map((item) => `<option value="${item.id}">${item.name} — ${item.role}</option>`)
-    .join('');
+  $('#agentSelect').replaceChildren(
+    ...State.agents.map((item) => new Option(`${item.name} — ${item.role}`, item.id)),
+  );
   $('#agentSelect').value = agent.id;
   $('#budgetInput').value = draft.token_budget;
   const providers = $('#providerSelect');
@@ -70,9 +70,9 @@ function getProfileAgent() {
 
 function renderCustomizer() {
   const agent = getProfileAgent();
-  $('#profileAgentSelect').innerHTML = State.agents
-    .map((item) => `<option value="${item.id}">${item.name} — ${item.role}</option>`)
-    .join('');
+  $('#profileAgentSelect').replaceChildren(
+    ...State.agents.map((item) => new Option(`${item.name} — ${item.role}`, item.id)),
+  );
   $('#profileAgentSelect').value = agent.id;
   $('#profileName').value = agent.name;
   $('#profileRole').value = agent.role;
@@ -128,7 +128,6 @@ async function saveCustomizer(event) {
     enabled_actions,
   };
   if (!profile.name || !profile.role || !profile.default_action) return;
-  Object.assign(agent, profile, { hue: profile.display_hue, action: profile.default_action });
   try {
     const updated = await fetchApi(`/api/agents/${agent.id}/profile`, {
       method: 'POST',
@@ -138,9 +137,9 @@ async function saveCustomizer(event) {
     $('#customizerHint').textContent = 'Perfil guardado y auditado.';
     renderDashboard();
     setTimeout(() => $('#customizerDialog').close(), 450);
-  } catch {
-    $('#customizerHint').textContent = 'Guardado local: conecta la API para persistirlo.';
-    renderDashboard();
+  } catch (error) {
+    $('#customizerHint').textContent =
+      `No se guardó el perfil: ${error.message}. El borrador sigue en el formulario.`;
   }
 }
 

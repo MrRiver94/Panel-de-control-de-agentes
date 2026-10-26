@@ -1,5 +1,15 @@
 # Registro de cambios
 
+## 2026-10-26 — Correcciones de seguridad, integridad y sincronización
+
+- Corregidos los 18 hallazgos de la revisión: HTML literal en accesos, plazo de app-server, transacciones y locks del roster, validación y conflictos HTTP coherentes.
+- SSE con operador explícito, revisión ordenada y lecturas fuera del event loop; descarte de respuestas de contextos anteriores y polling de respaldo.
+- Reconciliación de agentes y formularios, resultados/diffs conservados, acciones CRUD al instante e historial paginado con cursor.
+- Escritura y revisión en copia aislada; comprobación del original antes de aplicar y copia de recuperación ante conflictos. Las dependencias ignoradas deben prepararse aparte si se necesitan.
+- Sesiones filtradas por proyecto antes del límite y uso agrupado desde eventos persistidos, independiente del navegador.
+- Build determinista con verificación de `dist`, dependencias Python fijadas y workflow de CI para Windows/Linux. Nuevas regresiones de fallos, concurrencia, procesos y DOM real.
+- Detalles y límites en [el registro de correcciones](REMEDIATION_2026-10-26.md).
+
 ## 2026-10-24 — Monitor de VS Code, fiabilidad, diff, eficiencia y arranque
 
 - Monitor pasivo de sesiones externas por proyecto, con eventos explícitos, detección de señal antigua y asociación persistente con cada slime. Excluye sesiones propias e internas.

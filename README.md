@@ -76,6 +76,10 @@ El [mapa del código](docs/CODE_STRUCTURE.md) explica dónde modificar cada func
 
 La [revisión por etapas](docs/IMPLEMENTATION_REVIEW.md) registra lo implementado y comprobado. El [plan de pruebas manuales](docs/MANUAL_TEST_PLAN.md) recoge los escenarios pendientes de validar con la aplicación.
 
+La [revisión profunda de arquitectura del 26 de octubre de 2026](docs/ARCHITECTURE_REVIEW_2026-10-26.md) recoge los defectos priorizados, la evidencia comprobada y el plan de mejora pendiente.
+
+El [registro de correcciones de esa revisión](docs/REMEDIATION_2026-10-26.md) detalla los arreglos aplicados, sus regresiones y los límites que siguen vigentes.
+
 ## Principios
 
 - La pantalla principal comunica estado y actividad en directo.

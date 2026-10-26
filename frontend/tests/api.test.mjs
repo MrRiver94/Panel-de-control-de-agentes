@@ -77,3 +77,18 @@ test('API timeout aborts transport and explains safe resubmission', async () => 
   await assert.rejects(() => fetchApi('/api/dispatch'), /identificador de envío/);
   assert.equal(cleared, true);
 });
+
+test('API preserves context cancellation instead of reporting a timeout', async () => {
+  const controller = new AbortController();
+  const fetchApi = await client(
+    (_url, { signal }) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () =>
+          reject(Object.assign(new Error(), { name: 'AbortError' })),
+        );
+      }),
+  );
+  const pending = fetchApi('/api/dashboard', { signal: controller.signal });
+  controller.abort();
+  await assert.rejects(pending, (error) => error.name === 'AbortError');
+});

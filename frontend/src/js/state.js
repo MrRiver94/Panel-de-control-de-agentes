@@ -21,6 +21,7 @@ const State = {
   dashboardReady: false,
   knownDispatches: new Set(),
   eventSource: null,
+  streamHealthy: false,
   buildId: null,
   openAgentId: null,
   roomZoom: 1,

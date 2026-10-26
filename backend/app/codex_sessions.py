@@ -8,11 +8,14 @@ from typing import Any
 import json
 import os
 import time
+import threading
 
 MAX_SESSIONS = 40
 TAIL_BYTES = 2_000_000
 _cache: dict[str, Any] | None = None
 _cache_at = 0.0
+_project_cache: dict[tuple[str, str], tuple[float, dict]] = {}
+_session_lock = threading.RLock()
 
 
 def _sessions_root() -> Path:
@@ -20,7 +23,7 @@ def _sessions_root() -> Path:
     return home / "sessions"
 
 
-def _recent_rollouts() -> list[Path]:
+def _recent_rollouts(limit: int | None = MAX_SESSIONS) -> list[Path]:
     root = _sessions_root()
     if not root.is_dir():
         return []
@@ -31,7 +34,36 @@ def _recent_rollouts() -> list[Path]:
                 paths.append((path.stat().st_mtime, path))
         except OSError:
             continue
-    return [path for _, path in sorted(paths, reverse=True)[:MAX_SESSIONS]]
+    ordered = sorted(paths, reverse=True)
+    return [path for _, path in (ordered if limit is None else ordered[:limit])]
+
+
+def _normalized_workspace(value: str) -> str:
+    value = os.path.normpath(value).replace("\\", "/").rstrip("/")
+    return value.casefold() if os.name == "nt" or (len(value) > 1 and value[1] == ":") else value
+
+
+def _matches_workspace(path: Path, root: str) -> bool:
+    """Read only bounded metadata until the project is known, not every tail."""
+    try:
+        with path.open("rb") as stream:
+            header = stream.read(65536).decode("utf-8", errors="replace")
+        for line in header.splitlines():
+            try:
+                record = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(record, dict) or record.get("type") != "session_meta":
+                continue
+            payload = record.get("payload")
+            cwd = payload.get("cwd") if isinstance(payload, dict) else None
+            if not isinstance(cwd, str):
+                return False
+            cwd = _normalized_workspace(cwd)
+            return cwd == root or cwd.startswith(root + "/")
+    except OSError:
+        pass
+    return False
 
 
 def _read_rollout(path: Path, mtime: float) -> dict[str, Any] | None:
@@ -39,12 +71,22 @@ def _read_rollout(path: Path, mtime: float) -> dict[str, Any] | None:
     return read_session(path, mtime)
 
 
-def get_codex_sessions() -> dict[str, Any]:
+def get_codex_sessions(workspace: str | None = None) -> dict[str, Any]:
+    with _session_lock:
+        return _get_codex_sessions(workspace)
+
+
+def _get_codex_sessions(workspace: str | None = None) -> dict[str, Any]:
     global _cache, _cache_at
-    if _cache is not None and time.monotonic() - _cache_at < 2:
-        return _cache
+    root = _normalized_workspace(workspace) if workspace else None
+    key = (str(_sessions_root()), root or "")
+    cached = _project_cache.get(key)
+    if cached and time.monotonic() - cached[0] < 2:
+        return cached[1]
     sessions = []
-    for path in _recent_rollouts():
+    for path in _recent_rollouts(limit=None if root else MAX_SESSIONS):
+        if root and not _matches_workspace(path, root):
+            continue
         try:
             mtime = path.stat().st_mtime
         except OSError:
@@ -52,9 +94,15 @@ def get_codex_sessions() -> dict[str, Any]:
         session = _read_rollout(path, mtime)
         if session:
             sessions.append(session)
-    _cache = {"available": bool(sessions), "sessions": sessions}
+            if len(sessions) >= MAX_SESSIONS:
+                break
+    result = {"available": bool(sessions), "sessions": sessions}
+    _project_cache[key] = (time.monotonic(), result)
+    if len(_project_cache) > 12:
+        _project_cache.pop(next(iter(_project_cache)))
+    _cache = result
     _cache_at = time.monotonic()
-    return _cache
+    return result
 
 
 def get_rollout_usage_fallback() -> dict[str, Any]:

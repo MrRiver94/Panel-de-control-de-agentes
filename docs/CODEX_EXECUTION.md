@@ -11,6 +11,12 @@
 
 Cada envío crea una misión independiente. Se ejecuta una sola misión a la vez.
 
+Las misiones de escritura preparan una copia aislada con el contenido actual del repositorio, incluidos los cambios previos no confirmados y archivos no ignorados. FORGE y SENTINEL trabajan en esa copia. Al terminar, el panel comprueba contenido, HEAD e índice del original antes de aplicar el resultado. Si detecta cambios concurrentes, conserva el original y muestra una ruta de recuperación en el historial. Los diffs corresponden a la copia de la misión.
+
+La copia tiene un Git propio de referencia; el panel no hace commits en el repositorio original ni cambia su staging. No se copian las dependencias ni credenciales ignoradas. Otros proyectos pueden necesitar preparar sus dependencias dentro de la copia para ejecutar herramientas. Si seleccionas una subcarpeta, se conserva el contexto fuente de su raíz Git, pero se publican cambios solo dentro de la carpeta seleccionada. Enlaces simbólicos, junctions y submódulos no compatibles se rechazan antes de publicar.
+
+La aplicación de archivos comprueba conflictos antes y después y revierte sus cambios si falla, conservando la recuperación. No es una transacción atómica del sistema de archivos ante una caída del proceso o del sistema operativo. Revisa los cambios antes de usarlos.
+
 ## Motor y credenciales
 
 El backend inicia `codex exec --json` y consume eventos JSONL. Reutiliza el inicio de sesión de Codex CLI; no necesita una clave nueva en el panel. Si falta autenticación, ejecuta `codex login` en una terminal y pulsa **RECONECTAR**.
@@ -33,13 +39,13 @@ Los eventos de comandos, edición, búsqueda, planificación y respuesta selecci
 
 Los tokens se actualizan al llegar `turn.completed`; no se estiman durante la ejecución. Entrada cacheada y razonamiento forman parte de entrada/salida: no se suman dos veces. Si Codex no proporciona consumo de un turno fallido o interrumpido, aparece como no disponible.
 
-El presupuesto es una referencia por fase, no un límite duro ni un saldo de la cuenta. La CLI no garantiza detenerse exactamente en esa cantidad. La gráfica utiliza eventos `codex_usage`, separados de las antiguas muestras simuladas. La auditoría anterior se conserva.
+El presupuesto es una referencia por fase, no un límite duro ni un saldo de la cuenta. La CLI no garantiza detenerse exactamente en esa cantidad. La gráfica agrupa los eventos persistidos `codex_usage` por minuto de finalización del turno; funciona aunque el panel haya estado cerrado y no reconstruye consumo por segundo. Las muestras antiguas no alimentan la nueva serie. La auditoría anterior se conserva.
 
 ## Ciclo de vida y límites
 
 - SQLite guarda estados, resultados por fase y consumo. Recargar el navegador no detiene el trabajo.
 - Cada envío del formulario lleva un identificador persistente en el servidor: repetirlo recupera la misma ejecución. **REINTENTAR MISIÓN** crea un intento nuevo, sin borrar el anterior; no hay reintentos automáticos de trabajos que puedan modificar archivos.
-- El historial periódico usa resúmenes. Resultados, revisión y diff se descargan al solicitarlos. El diff se captura durante la implementación, no se reconstruye después con el estado actual del proyecto. Los intentos antiguos pueden no tenerlo.
+- El historial periódico usa resúmenes y permite cargar misiones anteriores mediante un cursor estable. Resultados, revisión y diff se descargan al solicitarlos y se conservan abiertos durante los refrescos. El diff se captura durante la implementación, no se reconstruye después con el estado actual del proyecto. Los intentos antiguos pueden no tenerlo.
 - Los diffs tienen límites de tamaño, omiten rutas sensibles y contenido binario, y ocultan patrones de credenciales. Es una protección defensiva, no una garantía de reconocer todo secreto posible.
 - Se comparan las huellas de los archivos Git antes y después de FORGE, incluyendo cambios previos y archivos no ignorados. Un texto final no prueba una modificación: las misiones de escritura sin diferencias se muestran como **SIN CAMBIOS**. La lista de archivos refleja cambios durante la fase, sin atribuir como nuevos los que ya existían.
 - **CAMBIOS GENERADOS** indica que hay diferencias en archivos; la revisión de SENTINEL y la comprobación visual determinan si satisfacen la petición. Los turnos de solo lectura se muestran como **PROPUESTA LISTA**.
@@ -61,6 +67,7 @@ El presupuesto es una referencia por fase, no un límite duro ni un saldo de la 
 | `backend/app/process_lifetime.py` | Árbol de procesos en Windows. |
 | `backend/app/runtime_lock.py` | Una instancia del runtime por base de datos. |
 | `backend/app/execution_store.py` | Historial SQLite y muestras reales. |
+| `backend/app/workspace_transaction.py` | Copia aislada, detección de conflictos y aplicación recuperable. |
 | `backend/app/routes/missions.py` | Estado, inicio, consulta y cancelación locales. |
 | `frontend/src/js/features/executions.js` | Proyecto, permisos e historial. |
 

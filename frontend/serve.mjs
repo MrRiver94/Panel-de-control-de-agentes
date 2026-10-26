@@ -51,6 +51,7 @@ const server = createServer(async (request, response) => {
     response.writeHead(200, {
       'Content-Length': fileInfo.size,
       'Content-Type': mimeTypes[extname(filePath).toLowerCase()] || 'application/octet-stream',
+      'X-SlimeOps-Workspace': encodeURIComponent(resolve(frontendDirectory, '..')),
     });
     if (request.method === 'HEAD') response.end();
     else createReadStream(filePath).pipe(response);

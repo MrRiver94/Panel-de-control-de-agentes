@@ -48,7 +48,7 @@ function stopRoomSimulation() {
   const button = $('#simulateAll');
   button.textContent = 'SIMULAR: TODOS AL TRABAJO';
   button.classList.remove('IsRunning');
-  if (State.latestDashboard) consumeDashboard(State.latestDashboard);
+  if (State.latestDashboard) consumeDashboard(State.latestDashboard, { replay: true });
   else renderDashboard();
   saveRoomState();
 }

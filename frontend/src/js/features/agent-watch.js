@@ -4,7 +4,15 @@ import { $, formatNumber, uppercase } from '../dom.js';
 import { State } from '../state.js';
 
 function createAgentWatchCard(agent) {
-  return `<article class="AgentWatchCard" data-watch-agent-id="${agent.id}"><div class="AgentWatchTop"><span class="AgentSignal"></span><strong></strong><em></em></div><div class="AgentMiniScene"><i class="MiniGlow"></i><i class="MiniDesk"></i><i class="AgentFeedSlime"></i><i class="MiniParticles"></i></div><div class="AgentWatchBottom"><span class="AgentWatchRole"></span><span class="AgentWatchTokens"></span></div><button class="AgentInfoButton" type="button" data-agent-info="${agent.id}" aria-expanded="false">VER ACTIVIDAD <span>+</span></button><section class="AgentDetailPopover" hidden><button class="AgentPopoverClose" type="button" data-agent-info="${agent.id}" aria-label="Cerrar detalle">×</button><b></b><p></p><small></small></section></article>`;
+  const card = document.createElement('article');
+  card.className = 'AgentWatchCard';
+  card.dataset.watchAgentId = agent.id;
+  card.innerHTML =
+    '<div class="AgentWatchTop"><span class="AgentSignal"></span><strong></strong><em></em></div><div class="AgentMiniScene"><i class="MiniGlow"></i><i class="MiniDesk"></i><i class="AgentFeedSlime"></i><i class="MiniParticles"></i></div><div class="AgentWatchBottom"><span class="AgentWatchRole"></span><span class="AgentWatchTokens"></span></div><button class="AgentInfoButton" type="button" aria-expanded="false">VER ACTIVIDAD <span>+</span></button><section class="AgentDetailPopover" hidden><button class="AgentPopoverClose" type="button" aria-label="Cerrar detalle">×</button><b></b><p></p><small></small></section>';
+  card.querySelectorAll('button').forEach((button) => {
+    button.dataset.agentInfo = agent.id;
+  });
+  return card;
 }
 
 function updateAgentWatchCard(card, agent) {
@@ -36,15 +44,22 @@ function updateAgentWatchCard(card, agent) {
 
 function renderAgentWatchPanels() {
   const rails = [$('#agentWatchRailLeft'), $('#agentWatchRailRight')];
+  const current = new Map();
+  const ids = new Set(State.agents.map((agent) => agent.id));
+  rails.forEach((rail) =>
+    rail.querySelectorAll('[data-watch-agent-id]').forEach((card) => {
+      const id = card.dataset.watchAgentId;
+      if (!ids.has(id) || current.has(id)) card.remove();
+      else current.set(id, card);
+    }),
+  );
   const split = Math.ceil(State.agents.length / 2);
   [State.agents.slice(0, split), State.agents.slice(split)].forEach((agents, index) => {
     const rail = rails[index];
-    agents.forEach((agent) => {
-      let card = rail.querySelector(`[data-watch-agent-id="${agent.id}"]`);
-      if (!card) {
-        rail.insertAdjacentHTML('beforeend', createAgentWatchCard(agent));
-        card = rail.querySelector(`[data-watch-agent-id="${agent.id}"]`);
-      }
+    agents.forEach((agent, position) => {
+      const card = current.get(agent.id) || createAgentWatchCard(agent);
+      if (rail.children[position] !== card)
+        rail.insertBefore(card, rail.children[position] || null);
       updateAgentWatchCard(card, agent);
     });
   });

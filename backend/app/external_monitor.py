@@ -38,13 +38,10 @@ def external_sessions(workspace: str | None = None) -> list[dict]:
         return cached[1]
     with state.audit_lock, audit_connection() as connection:
         bindings = dict(connection.execute("SELECT session_id, agent_id FROM session_bindings").fetchall())
-        rows = connection.execute(
-            "SELECT json_extract(step.value, '$.session_id') AS id "
-            "FROM executions, json_each(executions.payload, '$.steps') AS step"
-        ).fetchall()
+        rows = connection.execute("SELECT session_id AS id FROM execution_sessions").fetchall()
     managed = {row["id"] for row in rows if row["id"]}
     result = []
-    for session in get_codex_sessions()["sessions"]:
+    for session in get_codex_sessions(workspace=root)["sessions"]:
         cwd = normalized_path(session.get("workspace") or "")
         if session["id"] in managed or session.get("source") not in {'vscode','cli','subagent'} or not cwd:
             continue

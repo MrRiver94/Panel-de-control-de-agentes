@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from ..execution import manager
 from ..execution_store import read_execution, read_executions, read_execution_diffs
@@ -38,9 +38,15 @@ def dispatch_mission(request: DispatchRequest, http_request: Request) -> dict:
 
 
 @router.get("/api/executions")
-def executions(request: Request, summary: bool = False) -> list[dict]:
+def executions(request: Request, summary: bool = False,
+               limit: int = Query(default=20, ge=1, le=100),
+               offset: int = Query(default=0, ge=0), before: str | None = None) -> list[dict]:
     require_local_operator(request, "dashboard.view")
-    result=read_executions()
+    if before and offset:
+        raise HTTPException(422, "Usa cursor o desplazamiento, no ambos.")
+    if before and read_execution(before) is None:
+        raise HTTPException(404, "Cursor de historial no encontrado.")
+    result=read_executions(limit, offset, before)
     if summary:
         result=[{**item,'steps':[{key:value for key,value in step.items() if key not in {'result','review'}} | {'has_result':bool(step.get('result')),'has_review':bool(step.get('review'))} for step in item['steps']]} for item in result]
     return result

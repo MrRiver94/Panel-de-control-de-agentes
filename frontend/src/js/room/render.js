@@ -5,7 +5,12 @@ import { State } from '../state.js';
 import { applyRoomCamera } from './camera.js';
 
 function createSlimeUnit(agent) {
-  return `<div class="SlimeUnit" data-agent-id="${agent.id}"><i class="AgentStateBeacon" aria-hidden="true"></i><i class="WorkLabel"></i><i class="ActionProp" aria-hidden="true"></i><i class="SlimeSprite" aria-hidden="true"></i><strong></strong></div>`;
+  const unit = document.createElement('div');
+  unit.className = 'SlimeUnit';
+  unit.dataset.agentId = agent.id;
+  unit.innerHTML =
+    '<i class="AgentStateBeacon" aria-hidden="true"></i><i class="WorkLabel"></i><i class="ActionProp" aria-hidden="true"></i><i class="SlimeSprite" aria-hidden="true"></i><strong></strong>';
+  return unit;
 }
 
 function updateSlimeUnit(element, agent) {
@@ -55,11 +60,18 @@ function renderSlimeRoom() {
   const world = $('#roomWorld');
   adjustRestLayoutForViewport(world);
   applyRoomCamera(world);
+  const ids = new Set(State.agents.map((agent) => agent.id));
+  const current = new Map();
+  world.querySelectorAll('[data-agent-id]').forEach((element) => {
+    const id = element.dataset.agentId;
+    if (!ids.has(id) || current.has(id)) element.remove();
+    else current.set(id, element);
+  });
   State.agents.forEach((agent) => {
-    let element = world.querySelector(`[data-agent-id="${agent.id}"]`);
+    let element = current.get(agent.id);
     if (!element) {
-      world.insertAdjacentHTML('beforeend', createSlimeUnit(agent));
-      element = world.querySelector(`[data-agent-id="${agent.id}"]`);
+      element = createSlimeUnit(agent);
+      world.append(element);
     }
     updateSlimeUnit(element, agent);
   });

@@ -1,7 +1,7 @@
-import { $ } from '../dom.js';
+import { $, textElement } from '../dom.js';
 import { fetchApi } from '../services/api.js';
 import { State } from '../state.js';
-import { syncDashboard, connectLiveStream } from '../services/live.js';
+import { syncDashboard, connectLiveStream, resetLiveContext } from '../services/live.js';
 
 const ActiveStatuses = new Set(['queued', 'running', 'cancelling']);
 const Labels = {
@@ -16,14 +16,91 @@ const Labels = {
   no_changes: 'SIN CAMBIOS',
   needs_review: 'CAMBIOS CON OBSERVACIONES',
 };
-let lastHistory = '';
-let refreshing = false;
-let runtimeRefreshing = false;
+let refreshing = null;
+let runtimeRefreshing = null;
+const history = new Map();
+const records = new Map();
+const pageSize = 20;
+let pageCursor = null;
+let historyStarted = false;
+let hasMore = true;
+let loadingMore = false;
+let historyGeneration = 0;
+let historyOperator = State.operatorId;
 
-function textElement(tag, text) {
-  const element = document.createElement(tag);
-  element.textContent = text;
-  return element;
+function missionAllowed() {
+  if (!State.access) return true;
+  const user = State.access.users.find((item) => item.id === State.operatorId);
+  const permissions =
+    State.access.roles.find((role) => role.id === user?.role_id)?.permissions || [];
+  return permissions.includes('*') || permissions.includes('mission.create');
+}
+
+function resetExecutionHistory() {
+  historyGeneration += 1;
+  historyOperator = State.operatorId;
+  history.clear();
+  records.clear();
+  pageCursor = null;
+  historyStarted = false;
+  hasMore = true;
+  loadingMore = false;
+  State.runtimeReady = false;
+  State.executionBusy = false;
+  $('#submitMission').disabled = true;
+  $('#executionHistory').replaceChildren();
+  updateHistoryNavigation();
+}
+
+function updateHistoryNavigation() {
+  let button = $('#loadOlderExecutions');
+  if (!button) {
+    button = textElement('button', 'CARGAR MISIONES ANTERIORES');
+    button.id = 'loadOlderExecutions';
+    button.type = 'button';
+    $('#executionHistory').after(button);
+    button.addEventListener('click', loadOlderExecutions);
+  }
+  button.hidden = !hasMore;
+  button.disabled = loadingMore;
+  button.textContent = loadingMore ? 'CARGANDO MISIONES…' : 'CARGAR MISIONES ANTERIORES';
+}
+
+function mergeExecutions(executions, older = false) {
+  executions.forEach((execution) => {
+    if (!older || !history.has(execution.id)) history.set(execution.id, execution);
+  });
+  renderExecutions(
+    [...history.values()].sort(
+      (a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id),
+    ),
+  );
+}
+
+async function loadOlderExecutions() {
+  if (loadingMore || !hasMore) return;
+  if (!historyStarted) await syncExecutions();
+  if (!historyStarted || !hasMore || !pageCursor) return;
+  const generation = historyGeneration;
+  loadingMore = true;
+  updateHistoryNavigation();
+  try {
+    const executions = await fetchApi(
+      `/api/executions?summary=true&limit=${pageSize}&before=${encodeURIComponent(pageCursor)}`,
+    );
+    if (generation !== historyGeneration) return;
+    if (executions.length) pageCursor = executions.at(-1).id;
+    hasMore = executions.length === pageSize;
+    mergeExecutions(executions, true);
+  } catch (error) {
+    if (generation === historyGeneration)
+      $('#missionSummary').textContent = `No se pudo cargar el historial: ${error.message}`;
+  } finally {
+    if (generation === historyGeneration) {
+      loadingMore = false;
+      updateHistoryNavigation();
+    }
+  }
 }
 
 function appendResults(section, step) {
@@ -48,189 +125,242 @@ function appendResults(section, step) {
 
 function renderExecutions(executions) {
   State.executionBusy = executions.some((item) => ActiveStatuses.has(item.status));
-  $('#submitMission').disabled = State.executionBusy || !State.runtimeReady;
-  const encoded = JSON.stringify([executions, State.runtimeReady, State.executionBusy]);
-  if (encoded === lastHistory) return;
-  lastHistory = encoded;
-  const openIds = new Set(
-    [...document.querySelectorAll('.ExecutionRecord[open]')].map((item) => item.dataset.id),
-  );
-  $('#executionHistory').replaceChildren(
-    ...executions.map((execution) => {
+  $('#submitMission').disabled = State.executionBusy || !State.runtimeReady || !missionAllowed();
+  const container = $('#executionHistory');
+  const ids = new Set(executions.map((execution) => execution.id));
+  for (const [id, entry] of records) {
+    if (!ids.has(id)) {
+      entry.record.remove();
+      records.delete(id);
+    }
+  }
+  executions.forEach((execution, index) => {
+    let entry = records.get(execution.id);
+    if (!entry) {
       const record = document.createElement('details');
       record.className = 'ExecutionRecord';
       record.dataset.id = execution.id;
-      record.dataset.status = execution.status;
-      record.open = openIds.has(execution.id) || ActiveStatuses.has(execution.status);
-      record.append(
-        textElement(
-          'summary',
-          `${execution.status === 'completed' ? (execution.sandbox === 'read-only' ? 'PROPUESTA LISTA' : execution.changed_files?.length ? 'CAMBIOS GENERADOS' : 'TURNOS FINALIZADOS · CAMBIOS NO VERIFICADOS') : Labels[execution.status] || execution.status} · ${execution.prompt}`,
-        ),
-      );
-      record.append(
+      record.open = ActiveStatuses.has(execution.status);
+      const summary = document.createElement('summary');
+      const body = document.createElement('div');
+      record.append(summary, body);
+      entry = { record, summary, body, generation: historyGeneration };
+      records.set(execution.id, entry);
+    }
+    const { record, summary, body } = entry;
+    if (container.children[index] !== record)
+      container.insertBefore(record, container.children[index] || null);
+    const encoded = JSON.stringify(execution);
+    // Keep the record, loaded panels and their selection/focus intact on unrelated updates.
+    if (entry.encoded === encoded) {
+      if (entry.retry)
+        entry.retry.disabled = State.executionBusy || !State.runtimeReady || !missionAllowed();
+      if (entry.cancel)
+        entry.cancel.disabled = execution.status === 'cancelling' || !missionAllowed();
+      return;
+    }
+    entry.encoded = encoded;
+    record.dataset.status = execution.status;
+    summary.textContent = `${execution.status === 'completed' ? (execution.sandbox === 'read-only' ? 'PROPUESTA LISTA' : execution.changed_files?.length ? 'CAMBIOS GENERADOS' : 'TURNOS FINALIZADOS · CAMBIOS NO VERIFICADOS') : Labels[execution.status] || execution.status} · ${execution.prompt}`;
+    body.replaceChildren();
+    entry.retry = null;
+    entry.cancel = null;
+    body.append(
+      textElement(
+        'p',
+        `${execution.workspace} · ${execution.sandbox === 'workspace-write' ? 'Cambios permitidos' : 'Solo lectura'} · ${new Date(execution.created_at).toLocaleString('es-ES')}`,
+      ),
+    );
+    if (ActiveStatuses.has(execution.status)) {
+      const button = textElement('button', 'CANCELAR MISIÓN');
+      button.type = 'button';
+      entry.cancel = button;
+      button.disabled = execution.status === 'cancelling' || !missionAllowed();
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        try {
+          await fetchApi(`/api/executions/${execution.id}/cancel`, { method: 'POST' });
+          await syncExecutions();
+        } catch (error) {
+          $('#missionSummary').textContent = error.message;
+          button.disabled = false;
+        }
+      });
+      body.append(button);
+    }
+    if (execution.error) body.append(textElement('p', execution.error));
+    if (
+      ['failed', 'cancelled', 'interrupted', 'no_changes', 'needs_review'].includes(
+        execution.status,
+      )
+    ) {
+      const retry = textElement('button', 'REINTENTAR MISIÓN');
+      retry.type = 'button';
+      entry.retry = retry;
+      retry.disabled = State.executionBusy || !State.runtimeReady || !missionAllowed();
+      retry.addEventListener('click', async () => {
+        retry.disabled = true;
+        try {
+          await fetchApi(`/api/executions/${execution.id}/retry`, { method: 'POST' });
+          await syncExecutions();
+        } catch (error) {
+          $('#missionSummary').textContent = error.message;
+          retry.disabled = false;
+        }
+      });
+      body.append(retry);
+    }
+    if (execution.outcome) body.append(textElement('p', execution.outcome));
+    if (execution.recovery_workspace) {
+      body.append(
         textElement(
           'p',
-          `${execution.workspace} · ${execution.sandbox === 'workspace-write' ? 'Cambios permitidos' : 'Solo lectura'} · ${new Date(execution.created_at).toLocaleString('es-ES')}`,
+          'Los resultados se conservaron en una copia aislada para revisar y recuperar los cambios:',
         ),
       );
-      if (ActiveStatuses.has(execution.status)) {
-        const button = textElement('button', 'CANCELAR MISIÓN');
-        button.type = 'button';
-        button.disabled = execution.status === 'cancelling';
-        button.addEventListener('click', async () => {
-          button.disabled = true;
-          try {
-            await fetchApi(`/api/executions/${execution.id}/cancel`, { method: 'POST' });
-            await syncExecutions();
-          } catch (error) {
-            $('#missionSummary').textContent = error.message;
-            button.disabled = false;
-          }
-        });
-        record.append(button);
-      }
-      if (execution.error) record.append(textElement('p', execution.error));
-      if (
-        ['failed', 'cancelled', 'interrupted', 'no_changes', 'needs_review'].includes(
-          execution.status,
-        )
-      ) {
-        const retry = textElement('button', 'REINTENTAR MISIÓN');
-        retry.type = 'button';
-        retry.disabled = State.executionBusy || !State.runtimeReady;
-        retry.addEventListener('click', async () => {
-          retry.disabled = true;
-          try {
-            await fetchApi(`/api/executions/${execution.id}/retry`, { method: 'POST' });
-            await syncExecutions();
-          } catch (error) {
-            $('#missionSummary').textContent = error.message;
-            retry.disabled = false;
-          }
-        });
-        record.append(retry);
-      }
-      if (execution.outcome) record.append(textElement('p', execution.outcome));
-      if (execution.changed_files?.length) {
-        record.append(textElement('p', 'ARCHIVOS CAMBIADOS DURANTE LA MISIÓN'));
-        record.append(textElement('pre', execution.changed_files.join('\n')));
-        const diffButton = textElement('button', 'VER DIFF DE ESTA MISIÓN');
-        diffButton.type = 'button';
-        const diffView = document.createElement('div');
-        diffButton.addEventListener('click', async () => {
-          diffButton.disabled = true;
-          try {
-            const result = await fetchApi(`/api/executions/${execution.id}/diff`);
-            diffView.replaceChildren();
-            if (!result.files.length)
-              diffView.append(
-                textElement(
-                  'p',
-                  'Esta misión no tiene un diff guardado; los registros anteriores conservan solo la lista de archivos.',
-                ),
-              );
-            result.files.forEach((file) => {
-              const item = document.createElement('details');
-              item.append(
-                textElement(
-                  'summary',
-                  `${file.path}${file.binary ? ' · binario' : ''}${file.redacted ? ' · contenido protegido' : ''}${file.truncated ? ' · vista parcial' : ''}`,
-                ),
-              );
-              item.append(textElement('pre', file.patch));
-              diffView.append(item);
-            });
-          } catch (error) {
-            diffView.replaceChildren(textElement('p', error.message));
-            diffButton.disabled = false;
-          }
-        });
-        record.append(diffButton, diffView);
-      }
-      execution.steps.forEach((step) => {
-        const section = document.createElement('section');
-        section.className = 'ExecutionStep';
-        section.append(
-          textElement(
-            'b',
-            `${step.name} · ${step.status === 'completed' ? 'FASE FINALIZADA' : Labels[step.status] || step.status}`,
-          ),
-        );
-        const usage = step.usage;
-        section.append(
-          textElement(
-            'p',
-            `${step.model || 'Modelo de Codex local'} · ${step.effort} · ${usage ? `${(usage.input_tokens + usage.output_tokens).toLocaleString('es-ES')} tokens medidos` : 'Consumo aún no disponible'}${step.session_id ? ` · sesión ${step.session_id}` : ''}`,
-          ),
-        );
-        appendResults(section, step);
-        record.append(section);
+      body.append(textElement('pre', execution.recovery_workspace));
+    }
+    if (execution.changed_files?.length) {
+      body.append(textElement('p', 'ARCHIVOS CAMBIADOS DURANTE LA MISIÓN'));
+      body.append(textElement('pre', execution.changed_files.join('\n')));
+    }
+    if (execution.changed_files?.length && !entry.diffPanel) {
+      entry.diffPanel = document.createElement('div');
+      entry.diffPanel.className = 'ExecutionDiff';
+      const diffButton = textElement('button', 'VER DIFF DE ESTA MISIÓN');
+      diffButton.type = 'button';
+      const diffView = document.createElement('div');
+      diffButton.addEventListener('click', async () => {
+        diffButton.disabled = true;
+        try {
+          const result = await fetchApi(`/api/executions/${execution.id}/diff`);
+          if (entry.generation !== historyGeneration) return;
+          diffView.replaceChildren();
+          if (!result.files.length)
+            diffView.append(
+              textElement(
+                'p',
+                'Esta misión no tiene un diff guardado; los registros anteriores conservan solo la lista de archivos.',
+              ),
+            );
+          result.files.forEach((file) => {
+            const item = document.createElement('details');
+            item.append(
+              textElement(
+                'summary',
+                `${file.path}${file.binary ? ' · binario' : ''}${file.redacted ? ' · contenido protegido' : ''}${file.truncated ? ' · vista parcial' : ''}`,
+              ),
+            );
+            item.append(textElement('pre', file.patch));
+            diffView.append(item);
+          });
+        } catch (error) {
+          diffView.replaceChildren(textElement('p', error.message));
+          diffButton.disabled = false;
+        }
       });
-      if (execution.steps.some((step) => step.has_result || step.has_review)) {
-        const load = textElement('button', 'CARGAR RESULTADOS Y REVISIÓN');
-        load.type = 'button';
-        const results = document.createElement('div');
-        load.addEventListener('click', async () => {
-          load.disabled = true;
-          try {
-            const detail = await fetchApi(`/api/executions/${execution.id}`);
-            results.replaceChildren();
-            detail.steps.forEach((step) => {
-              const section = document.createElement('section');
-              section.className = 'ExecutionStep';
-              section.append(textElement('b', step.name));
-              appendResults(section, step);
-              results.append(section);
-            });
-            if (ActiveStatuses.has(detail.status)) {
-              load.textContent = 'ACTUALIZAR RESULTADOS';
-              load.disabled = false;
-            }
-          } catch (error) {
-            results.replaceChildren(textElement('p', error.message));
+      entry.diffPanel.append(diffButton, diffView);
+      record.append(entry.diffPanel);
+    }
+    execution.steps.forEach((step) => {
+      const section = document.createElement('section');
+      section.className = 'ExecutionStep';
+      section.append(
+        textElement(
+          'b',
+          `${step.name} · ${step.status === 'completed' ? 'FASE FINALIZADA' : Labels[step.status] || step.status}`,
+        ),
+      );
+      const usage = step.usage;
+      section.append(
+        textElement(
+          'p',
+          `${step.model || 'Modelo de Codex local'} · ${step.effort} · ${usage ? `${(usage.input_tokens + usage.output_tokens).toLocaleString('es-ES')} tokens medidos` : 'Consumo aún no disponible'}${step.session_id ? ` · sesión ${step.session_id}` : ''}`,
+        ),
+      );
+      appendResults(section, step);
+      body.append(section);
+    });
+    if (execution.steps.some((step) => step.has_result || step.has_review) && !entry.resultsPanel) {
+      entry.resultsPanel = document.createElement('div');
+      entry.resultsPanel.className = 'ExecutionResults';
+      const load = textElement('button', 'CARGAR RESULTADOS Y REVISIÓN');
+      load.type = 'button';
+      const results = document.createElement('div');
+      load.addEventListener('click', async () => {
+        load.disabled = true;
+        try {
+          const detail = await fetchApi(`/api/executions/${execution.id}`);
+          if (entry.generation !== historyGeneration) return;
+          results.replaceChildren();
+          detail.steps.forEach((step) => {
+            const section = document.createElement('section');
+            section.className = 'ExecutionStep';
+            section.append(textElement('b', step.name));
+            appendResults(section, step);
+            results.append(section);
+          });
+          if (ActiveStatuses.has(detail.status)) {
+            load.textContent = 'ACTUALIZAR RESULTADOS';
             load.disabled = false;
           }
-        });
-        record.append(load, results);
-      }
-      return record;
-    }),
-  );
+        } catch (error) {
+          results.replaceChildren(textElement('p', error.message));
+          load.disabled = false;
+        }
+      });
+      entry.resultsPanel.append(load, results);
+      record.append(entry.resultsPanel);
+    }
+  });
 }
 
 async function syncExecutions() {
-  if (refreshing) return;
-  refreshing = true;
+  if (historyOperator !== State.operatorId) resetExecutionHistory();
+  if (refreshing === historyGeneration) return;
+  const generation = historyGeneration;
+  refreshing = generation;
   try {
-    renderExecutions(await fetchApi('/api/executions?summary=true'));
+    const executions = await fetchApi(`/api/executions?summary=true&limit=${pageSize}`);
+    if (generation !== historyGeneration) return;
+    if (!historyStarted) {
+      historyStarted = true;
+      pageCursor = executions.at(-1)?.id || null;
+      hasMore = executions.length === pageSize;
+    }
+    mergeExecutions(executions);
+    updateHistoryNavigation();
   } catch {
+    if (generation !== historyGeneration) return;
     State.runtimeReady = false;
     $('#submitMission').disabled = true;
     $('#runtimeStatus').textContent =
       'Sin conexión con el runtime local. Pulsa RECONECTAR cuando la API esté disponible.';
   } finally {
-    refreshing = false;
+    if (refreshing === generation) refreshing = null;
   }
 }
 
 async function syncRuntime() {
-  if (runtimeRefreshing) return;
-  runtimeRefreshing = true;
+  if (runtimeRefreshing === historyGeneration) return;
+  const generation = historyGeneration;
+  runtimeRefreshing = generation;
   try {
     const runtime = await fetchApi('/api/runtime');
+    if (generation !== historyGeneration) return;
     State.runtimeReady = runtime.ready;
     if (!$('#runtimeWorkspace').value)
       $('#runtimeWorkspace').value = State.monitorWorkspace || runtime.workspace;
     $('#runtimeStatus').textContent = runtime.message;
-    $('#submitMission').disabled = !runtime.ready || State.executionBusy;
+    $('#submitMission').disabled = !runtime.ready || State.executionBusy || !missionAllowed();
     await syncExecutions();
   } catch (error) {
+    if (generation !== historyGeneration) return;
     State.runtimeReady = false;
     $('#submitMission').disabled = true;
     $('#runtimeStatus').textContent = `Codex no disponible: ${error.message}`;
   } finally {
-    runtimeRefreshing = false;
+    if (runtimeRefreshing === generation) runtimeRefreshing = null;
   }
 }
 
@@ -240,10 +370,7 @@ function startExecutions() {
   $('#runtimeWorkspace').addEventListener('change', () => {
     State.monitorWorkspace = $('#runtimeWorkspace').value.trim();
     localStorage.setItem('slimeops-workspace', State.monitorWorkspace);
-    if (State.eventSource) {
-      State.eventSource.close();
-      State.eventSource = null;
-    }
+    resetLiveContext();
     connectLiveStream();
     syncDashboard().catch(() => {});
   });
@@ -254,4 +381,11 @@ function startExecutions() {
   }, 15000);
 }
 
-export { startExecutions, syncExecutions, syncRuntime };
+export {
+  startExecutions,
+  syncExecutions,
+  syncRuntime,
+  resetExecutionHistory,
+  renderExecutions,
+  missionAllowed,
+};

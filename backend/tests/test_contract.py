@@ -62,12 +62,15 @@ class ModelControlsTests(unittest.TestCase):
         main = import_module("app.main")
         with TemporaryDirectory() as directory, patch.object(state, "AUDIT_DATABASE", Path(directory) / "agents.sqlite3"):
             with TestClient(main.app) as client:
-                first = datetime.now(timezone.utc) - timedelta(seconds=40)
-                sample_agent_usage(first, 100)
-                sample_agent_usage(first + timedelta(seconds=30), 220)
+                from app.repository import audit_connection, save_activity_event
+                minute = datetime.now(timezone.utc).replace(second=0, microsecond=0) - timedelta(minutes=1)
+                event = save_activity_event('forge', 'FORGE', 'codex_usage', 'Recorded turn', input_tokens=120)
+                with audit_connection() as connection:
+                    connection.execute('UPDATE activity_events SET created_at=? WHERE id=?', (minute.isoformat(), event.id))
                 response = client.get("/api/usage-series?minutes=60")
                 self.assertEqual(response.status_code, 200)
-                self.assertEqual(response.json()["points"][-1]["tokens_per_minute"], 240)
+                self.assertEqual(max(point['tokens_per_minute'] for point in response.json()['points']), 120)
+                self.assertEqual(response.json()['bucket_seconds'], 60)
 
     def test_activity_counts_reasoning_tokens(self) -> None:
         activity = ActivityIn(agent_id="nexus", kind="plan", message="planning", reasoning_tokens=25)

@@ -57,15 +57,18 @@ def no_window() -> int:
 
 
 def stop_process(process: subprocess.Popen) -> None:
-    if process.poll() is not None:
-        return
     if os.name == "nt":
+        if process.poll() is not None:
+            return
         try:
-            subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                           capture_output=True, creationflags=no_window(), timeout=10)
+            result = subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                                    capture_output=True, creationflags=no_window(), timeout=10)
+            if result.returncode and process.poll() is None:
+                process.kill()
         except (OSError, subprocess.TimeoutExpired):
             process.kill()
     else:
+        # The session leader may have exited while descendants still own its pipes.
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except ProcessLookupError:
@@ -100,6 +103,7 @@ def run_codex(arguments: list[str], prompt: str, workspace: str, cancelled: thre
             diagnostics.append(line[:1000])
 
     timed_out = threading.Event()
+    finished = threading.Event()
     try:
         timeout = timeout_seconds if timeout_seconds is not None else max(30, int(os.getenv("AGENT_RUN_TIMEOUT_SECONDS", "1800")))
     except ValueError:
@@ -107,13 +111,16 @@ def run_codex(arguments: list[str], prompt: str, workspace: str, cancelled: thre
 
     def watch() -> None:
         deadline = time.monotonic() + timeout
-        while process.poll() is None:
-            if cancelled.wait(0.25) or time.monotonic() > deadline:
+        while not finished.wait(0.05):
+            if cancelled.is_set() or time.monotonic() > deadline:
                 if not cancelled.is_set():
                     timed_out.set()
                 lifetime.close()
                 stop_process(process)
                 return
+            if process.poll() is not None:
+                # Windows jobs also close descendants left behind by the leader.
+                lifetime.close()
         lifetime.close()
 
     stderr_worker = threading.Thread(target=drain_errors, daemon=True)
@@ -145,6 +152,7 @@ def run_codex(arguments: list[str], prompt: str, workspace: str, cancelled: thre
                 raise RuntimeError("Codex necesita autenticación. Ejecuta codex login.")
             raise RuntimeError(f"Codex terminó con código {code}. Revisa modelo, permisos y configuración local.")
     finally:
+        finished.set()
         lifetime.close()
         try:
             stop_process(process)

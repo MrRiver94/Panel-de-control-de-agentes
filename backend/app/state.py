@@ -89,7 +89,10 @@ agents: dict[str, AgentState] = {
 }
 BUILTIN_AGENT_IDS = frozenset(agents)
 AUDIT_DATABASE = PROJECT_ROOT / "data" / "agent_activity.sqlite3"
-audit_lock = threading.Lock()
+# Lock order is runtime manager -> roster -> audit. Readers copy the roster while
+# holding roster_lock; writers publish their replacement only after DB commit.
+roster_lock = threading.RLock()
+audit_lock = threading.RLock()
 last_telemetry_sample = datetime.now(timezone.utc)
 codex_usage_cache: dict[str, Any] | None = None
 codex_usage_cached_at: datetime | None = None

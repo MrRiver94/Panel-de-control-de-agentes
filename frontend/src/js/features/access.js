@@ -1,10 +1,11 @@
 import { buildVisualAgent, getSelectedAgent } from '../agents/model.js';
 import { DemoAgents } from '../config.js';
-import { $ } from '../dom.js';
+import { $, textElement } from '../dom.js';
 import { fetchApi } from '../services/api.js';
-import { syncDashboard } from '../services/live.js';
+import { syncDashboard, connectLiveStream, resetLiveContext } from '../services/live.js';
 import { State } from '../state.js';
 import { renderDashboard } from '../ui/dashboard.js';
+import { resetExecutionHistory, syncRuntime, missionAllowed } from './executions.js';
 
 function applyAccess() {
   const role = State.access?.roles.find(
@@ -14,31 +15,36 @@ function applyAccess() {
   const allowed = (permission) => permissions.includes('*') || permissions.includes(permission);
   $('#saveControls').disabled = !allowed('agents.update');
   $('#openCustomizer').disabled = !allowed('agents.update');
-  $('#missionForm button').disabled = !allowed('mission.create');
+  $('#missionForm button').disabled =
+    !missionAllowed() || !State.runtimeReady || State.executionBusy;
   $('#openAccess').style.display = allowed('access.manage') ? '' : 'none';
 }
 
 function renderAccess() {
   const tree = State.access;
   if (!tree) return;
-  $('#activeUserSelect').innerHTML = tree.users
-    .map((user) => `<option value="${user.id}">${user.name}</option>`)
-    .join('');
+  $('#activeUserSelect').replaceChildren(
+    ...tree.users.map((user) => new Option(user.name, user.id)),
+  );
   $('#activeUserSelect').value = State.operatorId;
-  $('#newUserRole').innerHTML = tree.roles
-    .map((role) => `<option value="${role.id}">${role.name}</option>`)
-    .join('');
-  $('#accessTree').innerHTML = tree.roles
-    .map(
-      (role) =>
-        `<section><b>${role.name}</b><small>${role.permissions.join(' · ')}</small>${
-          tree.users
-            .filter((user) => user.role_id === role.id)
-            .map((user) => `<p>└ ${user.name}</p>`)
-            .join('') || '<p>└ sin usuarios</p>'
-        }</section>`,
-    )
-    .join('');
+  $('#newUserRole').replaceChildren(...tree.roles.map((role) => new Option(role.name, role.id)));
+  $('#accessTree').replaceChildren(
+    ...tree.roles.map((role) => {
+      const section = document.createElement('section');
+      section.append(
+        textElement('b', role.name),
+        textElement('small', role.permissions.join(' · ')),
+      );
+      const users = tree.users.filter((user) => user.role_id === role.id);
+      section.append(
+        ...(users.length
+          ? users.map((user) => textElement('p', `└ ${user.name}`))
+          : [textElement('p', '└ sin usuarios')]),
+      );
+      return section;
+    }),
+  );
+  renderAccessActions();
   applyAccess();
 }
 
@@ -46,7 +52,6 @@ async function openAccess() {
   try {
     State.access = await fetchApi('/api/access/tree');
     renderAccess();
-    renderAccessActions();
     $('#accessDialog').showModal();
   } catch {
     alert('No tienes permiso para gestionar accesos.');
@@ -55,28 +60,50 @@ async function openAccess() {
 
 function renderAccessActions() {
   const tree = State.access;
-  if (!tree || $('#accessActions')) return;
-  const roleCards = tree.roles
-    .map(
-      (role) =>
-        `<div class="AccessRow"><span>ROL: ${role.name}</span>${role.id === 'super-admin' ? '<small>PROTEGIDO</small>' : `<button data-role-edit="${role.id}">EDITAR</button><button data-role-delete="${role.id}">BORRAR</button>`}</div>`,
-    )
-    .join('');
-  const userCards = tree.users
-    .map(
-      (user) =>
-        `<div class="AccessRow"><span>USUARIO: ${user.name}</span>${user.id === 'super-admin' ? '<small>PROTEGIDO</small>' : `<button data-user-edit="${user.id}">EDITAR</button><button data-user-delete="${user.id}">BORRAR</button>`}</div>`,
-    )
-    .join('');
+  if (!tree) return;
+  let actions = $('#accessActions');
+  if (!actions) {
+    actions = document.createElement('section');
+    actions.className = 'AccessActions';
+    actions.id = 'accessActions';
+    $('#accessTree').after(actions);
+  }
+  const create = textElement('button', '+ CREAR AGENTE');
+  create.type = 'button';
+  create.className = 'PrimaryButton';
+  create.id = 'openCreateAgent';
+  actions.replaceChildren(create);
   const selected = getSelectedAgent();
-  const agentAction =
-    selected && !DemoAgents.some((agent) => agent.id === selected.id)
-      ? `<button class="SecondaryButton" data-agent-delete="${selected.id}">ELIMINAR ${selected.name}</button>`
-      : '';
-  $('#accessTree').insertAdjacentHTML(
-    'afterend',
-    `<section class="AccessActions" id="accessActions"><button class="PrimaryButton" id="openCreateAgent" type="button">+ CREAR AGENTE</button>${agentAction}<h3>GESTIÓN CRUD</h3>${roleCards}${userCards}</section>`,
-  );
+  if (selected && !DemoAgents.some((agent) => agent.id === selected.id)) {
+    const remove = textElement('button', `ELIMINAR ${selected.name}`);
+    remove.type = 'button';
+    remove.className = 'SecondaryButton';
+    remove.dataset.agentDelete = selected.id;
+    actions.append(remove);
+  }
+  actions.append(textElement('h3', 'GESTIÓN CRUD'));
+  for (const [kind, label, records] of [
+    ['role', 'ROL', tree.roles],
+    ['user', 'USUARIO', tree.users],
+  ]) {
+    for (const record of records) {
+      const row = document.createElement('div');
+      row.className = 'AccessRow';
+      row.append(textElement('span', `${label}: ${record.name}`));
+      if (record.id === 'super-admin') row.append(textElement('small', 'PROTEGIDO'));
+      else
+        for (const [action, title] of [
+          ['Edit', 'EDITAR'],
+          ['Delete', 'BORRAR'],
+        ]) {
+          const button = textElement('button', title);
+          button.type = 'button';
+          button.dataset[kind + action] = record.id;
+          row.append(button);
+        }
+      actions.append(row);
+    }
+  }
 }
 
 function refreshAccessActions() {
@@ -116,14 +143,12 @@ function bindAgentCreation() {
           }),
         });
         renderAccess();
-        refreshAccessActions();
       }
       if (button.dataset.roleDelete && confirm('¿Eliminar este rol?')) {
         State.access = await fetchApi(`/api/access/roles/${button.dataset.roleDelete}`, {
           method: 'DELETE',
         });
         renderAccess();
-        refreshAccessActions();
       }
       if (button.dataset.userEdit) {
         const user = State.access.users.find((item) => item.id === button.dataset.userEdit);
@@ -139,14 +164,12 @@ function bindAgentCreation() {
           body: JSON.stringify({ name, role_id }),
         });
         renderAccess();
-        refreshAccessActions();
       }
       if (button.dataset.userDelete && confirm('¿Eliminar este usuario?')) {
         State.access = await fetchApi(`/api/access/users/${button.dataset.userDelete}`, {
           method: 'DELETE',
         });
         renderAccess();
-        refreshAccessActions();
       }
     } catch (error) {
       alert(`No se pudo guardar: ${error.message}`);
@@ -176,6 +199,7 @@ function bindAgentCreation() {
       State.agents.push(buildVisualAgent(created));
       State.selectedAgentId = created.id;
       renderDashboard();
+      refreshAccessActions();
       $('#createAgentDialog').close();
     } catch (error) {
       alert(`No se pudo crear el agente: ${error.message}`);
@@ -189,8 +213,12 @@ function bindAccess() {
   $('#activeUserSelect').addEventListener('change', (event) => {
     State.operatorId = event.target.value;
     localStorage.setItem('slimeops-operator', State.operatorId);
+    resetLiveContext();
+    resetExecutionHistory();
     renderAccess();
+    connectLiveStream();
     syncDashboard().catch(() => {});
+    syncRuntime();
   });
   $('#roleForm').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -200,21 +228,29 @@ function bindAccess() {
       .map((item) => item.trim())
       .filter(Boolean);
     if (!name || !permissions.length) return;
-    State.access = await fetchApi('/api/access/roles', {
-      method: 'POST',
-      body: JSON.stringify({ name, permissions }),
-    });
-    renderAccess();
+    try {
+      State.access = await fetchApi('/api/access/roles', {
+        method: 'POST',
+        body: JSON.stringify({ name, permissions }),
+      });
+      renderAccess();
+    } catch (error) {
+      alert(`No se pudo crear el rol: ${error.message}`);
+    }
   });
   $('#userForm').addEventListener('submit', async (event) => {
     event.preventDefault();
     const name = $('#newUserName').value.trim();
     if (!name) return;
-    State.access = await fetchApi('/api/access/users', {
-      method: 'POST',
-      body: JSON.stringify({ name, role_id: $('#newUserRole').value }),
-    });
-    renderAccess();
+    try {
+      State.access = await fetchApi('/api/access/users', {
+        method: 'POST',
+        body: JSON.stringify({ name, role_id: $('#newUserRole').value }),
+      });
+      renderAccess();
+    } catch (error) {
+      alert(`No se pudo crear el usuario: ${error.message}`);
+    }
   });
 }
 

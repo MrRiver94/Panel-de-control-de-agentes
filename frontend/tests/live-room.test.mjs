@@ -225,6 +225,8 @@ test('visual simulation survives API updates and restores the live room without 
   const dashboard = {
     agents: [{ id: 'director', status: 'idle', current_task: 'En espera' }],
     events: [],
+    snapshot_epoch: 'fixture',
+    snapshot_revision: 1,
   };
   room.consumeDashboard(dashboard);
   const agent = room.State.agents[0];
@@ -233,7 +235,11 @@ test('visual simulation survives API updates and restores the live room without 
   assert.equal(agent.routeTarget, 'work');
   assert.equal(agent.simulatedWorking, true);
   const savedBefore = storage.get(room.RoomStateKey);
-  room.consumeDashboard(dashboard);
+  room.consumeDashboard({
+    ...dashboard,
+    agents: [{ id: 'director', status: 'running', current_task: 'Trabajo real' }],
+    snapshot_revision: 2,
+  });
   room.saveRoomState();
   assert.equal(agent.routeTarget, 'work');
   assert.equal(storage.get(room.RoomStateKey), savedBefore);
@@ -241,6 +247,8 @@ test('visual simulation survives API updates and restores the live room without 
   assert.equal(room.State.roomSimulation, null);
   assert.equal(agent.simulatedWorking, undefined);
   assert.deepEqual([...agent.position], original);
+  assert.equal(agent.routeTarget, 'work');
+  assert.equal(agent.operationalStatus, 'running');
 });
 
 test('backend thinking, error and paused states drive distinct visual states', async () => {

@@ -1,54 +1,46 @@
 """Routes dashboard operations."""
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Any
 import json
 import os
 import asyncio
+import threading
+from uuid import uuid4
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from .. import state
 from ..catalog import configured_model_catalog
+from ..config import PROJECT_ROOT
 from ..models import ActivityEvent
 from ..permissions import require_permission
-from ..repository import audit_connection, read_activity_events
-from ..telemetry import apply_live_telemetry
-from ..timeutils import now
+from ..repository import read_activity_events
+from ..telemetry import usage_series as measured_usage_series
 from ..external_monitor import external_sessions, project_external_agents
 
 router = APIRouter()
+_snapshot_lock = threading.Lock()
+_snapshot_epoch = uuid4().hex
+_snapshot_revision = 0
 
 
 @router.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "app": "slimeops", "version": "0.2.0"}
+    return {"status": "ok", "app": "slimeops", "version": "0.2.0", "workspace": str(PROJECT_ROOT)}
 
 
 @router.get("/api/dashboard")
 def dashboard(request: Request, workspace: str | None = None) -> dict:
     require_permission(request, "dashboard.view")
-    apply_live_telemetry()
     return dashboard_snapshot(workspace)
 
 
 @router.get("/api/usage-series")
 def usage_series(request: Request, minutes: int = 60) -> dict[str, Any]:
     require_permission(request, "dashboard.view")
-    minutes = max(15, min(minutes, 120))
-    cutoff = (now() - timedelta(minutes=minutes)).isoformat()
-    with state.audit_lock, audit_connection() as connection:
-        rows = connection.execute(
-            "SELECT sampled_at, total_tokens, delta_tokens, elapsed_seconds FROM runtime_usage_samples "
-            "WHERE sampled_at >= ? ORDER BY sampled_at ASC LIMIT 480", (cutoff,)
-        ).fetchall()
-    return {"window_minutes": minutes, "source": "codex-exec", "points": [
-        {"at": row["sampled_at"], "total_tokens": row["total_tokens"],
-         "tokens_per_minute": round(row["delta_tokens"] * 60 / row["elapsed_seconds"], 1) if row["elapsed_seconds"] > 0 else 0}
-        for row in rows
-    ]}
+    return measured_usage_series(max(15, min(minutes, 120)))
 
 
 @router.get("/api/models")
@@ -62,10 +54,17 @@ def available_models(request: Request) -> dict[str, Any]:
 
 
 def dashboard_snapshot(workspace: str | None = None) -> dict:
-    sessions = external_sessions(workspace)
-    return {"agents": project_external_agents([agent.model_dump() for agent in state.agents.values()], sessions),
-            "external_sessions": sessions,
-            "events": [event.model_dump(mode="json") for event in read_activity_events(50)]}
+    # Serialize projection reads so transport completion order cannot mint an older
+    # snapshot with a newer revision. This runs in worker threads, never on the loop.
+    global _snapshot_revision
+    with _snapshot_lock:
+        sessions = external_sessions(workspace)
+        with state.roster_lock:
+            payload = {"agents": project_external_agents([agent.model_dump() for agent in state.agents.values()], sessions),
+                       "external_sessions": sessions,
+                       "events": [event.model_dump(mode="json") for event in read_activity_events(50)]}
+        _snapshot_revision += 1
+        return {**payload, "snapshot_epoch": _snapshot_epoch, "snapshot_revision": _snapshot_revision}
 
 
 @router.get("/api/activity/history", response_model=list[ActivityEvent])
@@ -77,13 +76,27 @@ def activity_history(request: Request, limit: int = 100) -> list[ActivityEvent]:
 @router.get("/api/stream")
 def stream_dashboard(request: Request, workspace: str | None = None) -> StreamingResponse:
     """Push mission status changes immediately; polling remains as a safe fallback."""
+    if not request.headers.get("X-Operator-Id"):
+        raise HTTPException(403, "Falta identificar al operador del stream.")
     require_permission(request, "dashboard.view")
+
+    def authorized_snapshot():
+        require_permission(request, "dashboard.view")
+        return dashboard_snapshot(workspace)
+
     async def event_stream():
         previous = ""
         while not await request.is_disconnected():
-            encoded = json.dumps(dashboard_snapshot(workspace), ensure_ascii=False, separators=(",", ":"))
-            if encoded != previous:
-                previous = encoded
+            try:
+                snapshot = await asyncio.to_thread(authorized_snapshot)
+            except HTTPException:
+                return  # A revoked role must not keep receiving an open stream.
+            signature = json.dumps({key: value for key, value in snapshot.items()
+                                    if key not in {"snapshot_revision", "snapshot_epoch"}},
+                                   ensure_ascii=False, separators=(",", ":"))
+            if signature != previous:
+                previous = signature
+                encoded = json.dumps(snapshot, ensure_ascii=False, separators=(",", ":"))
                 yield f"data: {encoded}\n\n"
             else:
                 yield ": keepalive\n\n"

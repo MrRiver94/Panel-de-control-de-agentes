@@ -6,6 +6,7 @@ node_modules/
 data/*.sqlite3
 data/*.sqlite3-*
 data/*.lock
+data/workspaces/
 .pet-deps/
 Pets/
 .sites-publish/

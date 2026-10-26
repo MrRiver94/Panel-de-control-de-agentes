@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
+import { resolve } from 'node:path';
 import { probeService, waitForService, stopChild } from '../../scripts/local-services.mjs';
 
 async function service(t, handler) {
@@ -30,6 +31,21 @@ test('launcher rejects malformed health and unrelated frontend pages', async (t)
     res.end('<title>SlimeOps</title><div id="slimeRoom"></div>'),
   );
   assert.equal(await probeService(own, 'front'), 'ready');
+});
+test('launcher does not reuse another checkout of SlimeOps', async (t) => {
+  const workspace = process.cwd();
+  const other = resolve(workspace, 'different-checkout');
+  const api = await service(t, (_req, res) =>
+    res.end(JSON.stringify({ app: 'slimeops', workspace: other })),
+  );
+  assert.equal(await probeService(api, 'api', workspace), 'foreign');
+  assert.equal(await probeService(api, 'api', other), 'ready');
+  const front = await service(t, (_req, res) => {
+    res.setHeader('X-SlimeOps-Workspace', encodeURIComponent(other));
+    res.end('<title>SlimeOps</title><div id="slimeRoom"></div>');
+  });
+  assert.equal(await probeService(front, 'front', workspace), 'foreign');
+  assert.equal(await probeService(front, 'front', other), 'ready');
 });
 test('launcher can cancel waiting for readiness without hanging', async () => {
   await assert.rejects(

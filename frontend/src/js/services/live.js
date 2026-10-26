@@ -8,7 +8,53 @@ import { State } from '../state.js';
 import { renderDashboard, updateConnectionLabel } from '../ui/dashboard.js';
 import { fetchApi } from './api.js';
 
-function consumeDashboard(dashboard) {
+let generation = 0;
+let activeContext;
+let pendingDashboard;
+let reconnectTimer;
+let lastRevision = -1;
+let lastEpoch;
+const retiredEpochs = new Set();
+const contextKey = () => JSON.stringify([State.operatorId, State.monitorWorkspace || '']);
+
+function resetLiveContext() {
+  generation += 1;
+  activeContext = contextKey();
+  clearTimeout(reconnectTimer);
+  State.eventSource?.close();
+  State.eventSource = null;
+  State.streamHealthy = false;
+  pendingDashboard?.controller.abort();
+  pendingDashboard = null;
+  lastRevision = -1;
+  lastEpoch = undefined;
+  retiredEpochs.clear();
+  State.connected = false;
+  updateConnectionLabel();
+}
+
+function currentGeneration() {
+  if (activeContext !== contextKey()) resetLiveContext();
+  return generation;
+}
+
+function consumeDashboard(dashboard, { replay = false } = {}) {
+  if (!Array.isArray(dashboard?.agents)) throw new Error('Dashboard inválido.');
+  const epoch = dashboard.snapshot_epoch;
+  const revision = dashboard.snapshot_revision;
+  if (epoch && retiredEpochs.has(epoch)) return;
+  State.connected = true;
+  State.lastTelemetryAt = new Date();
+  updateConnectionLabel();
+  if (epoch && Number.isInteger(revision)) {
+    if (lastEpoch !== epoch) {
+      if (lastEpoch) retiredEpochs.add(lastEpoch);
+      lastEpoch = epoch;
+      lastRevision = -1;
+    }
+    if (!replay && revision <= lastRevision) return;
+    lastRevision = Math.max(lastRevision, revision);
+  }
   State.latestDashboard = dashboard;
   State.externalSessions = dashboard.external_sessions || [];
   dashboard.agents.forEach((remoteAgent) => {
@@ -48,40 +94,111 @@ function consumeDashboard(dashboard) {
     State.selectedAgentId = State.agents[0]?.id;
   detectRemoteDispatches(dashboard.events || []);
   State.events = dashboard.events || [];
-  State.connected = true;
-  State.lastTelemetryAt = new Date();
-  updateConnectionLabel();
   renderDashboard();
 }
 
 async function syncDashboard() {
+  const version = currentGeneration();
+  if (State.streamHealthy) return;
+  if (pendingDashboard) return pendingDashboard.promise;
+  const context = contextKey();
+  const controller = new AbortController();
   const query = State.monitorWorkspace
     ? `?workspace=${encodeURIComponent(State.monitorWorkspace)}`
     : '';
-  consumeDashboard(await fetchApi('/api/dashboard' + query));
+  const task = { controller };
+  pendingDashboard = task;
+  task.promise = (async () => {
+    try {
+      const dashboard = await fetchApi('/api/dashboard' + query, { signal: controller.signal });
+      if (version === generation && context === contextKey()) consumeDashboard(dashboard);
+    } catch (error) {
+      if (version === generation && context === contextKey() && !controller.signal.aborted) {
+        State.connected = false;
+        updateConnectionLabel();
+        throw error;
+      }
+    } finally {
+      if (pendingDashboard === task) pendingDashboard = null;
+    }
+  })();
+  return task.promise;
 }
 
 function connectLiveStream() {
+  const version = currentGeneration();
   if (State.eventSource) return;
+  const context = contextKey();
   const query = State.monitorWorkspace
     ? `?workspace=${encodeURIComponent(State.monitorWorkspace)}`
     : '';
-  const stream = new EventSource(`${API_URL}/api/stream${query}`);
+  const controller = new AbortController();
+  let reader;
+  let watchdog;
+  const stream = {
+    close() {
+      clearTimeout(watchdog);
+      controller.abort();
+      void reader?.cancel().catch(() => {});
+    },
+  };
   State.eventSource = stream;
-  stream.onmessage = (event) => {
+  const alive = () =>
+    version === generation && context === contextKey() && State.eventSource === stream;
+  const refreshWatchdog = () => {
+    clearTimeout(watchdog);
+    watchdog = setTimeout(() => controller.abort(), 15000);
+  };
+  void (async () => {
     try {
-      consumeDashboard(JSON.parse(event.data));
-    } catch {}
-  };
-  stream.onerror = () => {
-    State.connected = false;
-    updateConnectionLabel();
-    stream.close();
-    if (State.eventSource === stream) {
-      State.eventSource = null;
-      setTimeout(connectLiveStream, 2500);
+      refreshWatchdog();
+      const response = await fetch(`${API_URL}/api/stream${query}`, {
+        headers: { Accept: 'text/event-stream', 'X-Operator-Id': State.operatorId },
+        signal: controller.signal,
+        cache: 'no-store',
+      });
+      if (!response.ok || !response.body) throw new Error(`Stream ${response.status}`);
+      reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (alive()) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!alive()) break;
+        refreshWatchdog();
+        State.streamHealthy = true;
+        State.connected = true;
+        State.lastTelemetryAt = new Date();
+        updateConnectionLabel();
+        buffer = (buffer + decoder.decode(value, { stream: true })).replaceAll('\r\n', '\n');
+        if (buffer.length > 1_000_000) throw new Error('Stream demasiado grande.');
+        let boundary;
+        while ((boundary = buffer.indexOf('\n\n')) >= 0) {
+          const block = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          const data = block
+            .split('\n')
+            .filter((line) => line.startsWith('data:'))
+            .map((line) => line.slice(5).trimStart())
+            .join('\n');
+          if (data) consumeDashboard(JSON.parse(data));
+        }
+      }
+    } catch {
+      // Polling remains available until a connection with this context recovers.
+    } finally {
+      stream.close();
+      if (alive()) {
+        State.streamHealthy = false;
+        State.connected = false;
+        State.eventSource = null;
+        updateConnectionLabel();
+        reconnectTimer = setTimeout(() => {
+          if (version === generation && context === contextKey()) connectLiveStream();
+        }, 2500);
+      }
     }
-  };
+  })();
 }
 
 async function checkForDeployment() {
@@ -96,14 +213,19 @@ async function checkForDeployment() {
 }
 
 async function syncCodexUsage() {
+  const context = contextKey();
   const usage = await fetchApi('/api/codex-usage');
+  if (context !== contextKey()) return;
   State.codexUsage = usage;
   renderCodexUsage();
   renderCodexUsageChart();
 }
 
 async function syncUsageSeries() {
-  State.agentUsageSeries = await fetchApi('/api/usage-series?minutes=60');
+  const context = contextKey();
+  const series = await fetchApi('/api/usage-series?minutes=60');
+  if (context !== contextKey()) return;
+  State.agentUsageSeries = series;
   renderAgentUsageChart();
 }
 
@@ -111,6 +233,7 @@ export {
   consumeDashboard,
   syncDashboard,
   connectLiveStream,
+  resetLiveContext,
   checkForDeployment,
   syncCodexUsage,
   syncUsageSeries,

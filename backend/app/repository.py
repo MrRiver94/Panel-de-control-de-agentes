@@ -24,8 +24,18 @@ def audit_connection() -> Generator[sqlite3.Connection, None, None]:
         connection.close()
 
 
+@contextmanager
+def _write_connection(connection: sqlite3.Connection | None = None) -> Generator[sqlite3.Connection, None, None]:
+    """Reuse an operation's transaction without acquiring another lock/commit."""
+    if connection is not None:
+        yield connection
+    else:
+        with state.audit_lock, audit_connection() as opened:
+            yield opened
+
+
 def create_audit_schema() -> None:
-    with state.audit_lock, audit_connection() as connection:
+    with state.roster_lock, state.audit_lock, audit_connection() as connection:
         connection.execute("""
             CREATE TABLE IF NOT EXISTS activity_events (
                 id TEXT PRIMARY KEY,
@@ -41,6 +51,7 @@ def create_audit_schema() -> None:
             )
         """)
         connection.execute("CREATE INDEX IF NOT EXISTS activity_events_created_at ON activity_events(created_at DESC)")
+        connection.execute("CREATE INDEX IF NOT EXISTS activity_events_kind_created_at ON activity_events(kind, created_at)")
         connection.execute("""
             CREATE TABLE IF NOT EXISTS usage_samples (
                 sampled_at TEXT PRIMARY KEY,
@@ -86,55 +97,55 @@ def create_audit_schema() -> None:
 
 
 def load_agent_profiles() -> None:
-    with state.audit_lock, audit_connection() as connection:
-        rows = connection.execute("SELECT * FROM agent_profiles").fetchall()
-    for row in rows:
-        agent = state.agents.get(row["agent_id"])
-        if not agent:
-            continue
-        agent.name = row["name"]
-        agent.role = row["role"]
-        agent.tone = row["tone"]
-        agent.display_hue = row["display_hue"]
-        agent.idle_mode = row["idle_mode"]
-        agent.default_action = row["default_action"]
-        agent.enabled_actions = json.loads(row["enabled_actions"])
+    with state.roster_lock:
+        with state.audit_lock, audit_connection() as connection:
+            rows = connection.execute("SELECT * FROM agent_profiles").fetchall()
+        for row in rows:
+            agent = state.agents.get(row["agent_id"])
+            if not agent:
+                continue
+            profile = {key: row[key] for key in ("name", "role", "tone", "display_hue", "idle_mode", "default_action")}
+            profile["enabled_actions"] = json.loads(row["enabled_actions"])
+            state.agents[agent.id] = AgentState.model_validate(agent.model_dump() | profile)
 
 
 def load_agent_registry() -> None:
-    with state.audit_lock, audit_connection() as connection:
-        rows = connection.execute("SELECT payload FROM agent_registry").fetchall()
-    for row in rows:
-        agent = AgentState.model_validate(json.loads(row["payload"]))
-        state.agents[agent.id] = agent
+    with state.roster_lock:
+        with state.audit_lock, audit_connection() as connection:
+            rows = connection.execute("SELECT payload FROM agent_registry").fetchall()
+        for row in rows:
+            agent = AgentState.model_validate(json.loads(row["payload"]))
+            state.agents[agent.id] = agent
 
 
-def save_agent_registry(agent: AgentState) -> None:
-    with state.audit_lock, audit_connection() as connection:
-        connection.execute("INSERT OR REPLACE INTO agent_registry VALUES (?, ?)", (agent.id, json.dumps(agent.model_dump())))
+def save_agent_registry(agent: AgentState, connection: sqlite3.Connection | None = None, *, create: bool = False) -> None:
+    with _write_connection(connection) as transaction:
+        statement = "INSERT INTO agent_registry VALUES (?, ?)" if create else "INSERT OR REPLACE INTO agent_registry VALUES (?, ?)"
+        transaction.execute(statement, (agent.id, json.dumps(agent.model_dump())))
 
 
-def save_agent_profile(agent: AgentState) -> None:
-    with state.audit_lock, audit_connection() as connection:
-        connection.execute(
+def save_agent_profile(agent: AgentState, connection: sqlite3.Connection | None = None, *, create: bool = False) -> None:
+    with _write_connection(connection) as transaction:
+        transaction.execute(
             "INSERT OR REPLACE INTO agent_profiles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (agent.id, agent.name, agent.role, agent.tone, agent.display_hue, agent.idle_mode,
              agent.default_action, json.dumps(agent.enabled_actions), now().isoformat()),
         )
-    save_agent_registry(agent)
+        save_agent_registry(agent, connection=transaction, create=create)
 
 
 def save_activity_event(
     agent_id: str, agent_name: str, kind: str, message: str,
     input_tokens: int = 0, output_tokens: int = 0, reasoning_tokens: int = 0,
+    connection: sqlite3.Connection | None = None,
 ) -> ActivityEvent:
     event = ActivityEvent(
         id=str(uuid4()), agent_id=agent_id, agent=agent_name, kind=kind, message=message,
         tokens=input_tokens + output_tokens + reasoning_tokens, input_tokens=input_tokens,
         output_tokens=output_tokens, reasoning_tokens=reasoning_tokens, created_at=now(),
     )
-    with state.audit_lock, audit_connection() as connection:
-        connection.execute(
+    with _write_connection(connection) as transaction:
+        transaction.execute(
             "INSERT INTO activity_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (event.id, event.agent_id, event.agent, event.kind, event.message, event.tokens,
              event.input_tokens, event.output_tokens, event.reasoning_tokens, event.created_at.isoformat()),
