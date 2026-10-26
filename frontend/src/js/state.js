@@ -11,6 +11,8 @@ const State = {
   connected: false,
   runtimeReady: false,
   executionBusy: false,
+  monitorWorkspace: localStorage.getItem('slimeops-workspace') || '',
+  externalSessions: [],
   lastTelemetryAt: null,
   codexUsage: null,
   agentUsageSeries: null,

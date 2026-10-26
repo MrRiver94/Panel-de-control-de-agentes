@@ -1,5 +1,15 @@
 # Registro de cambios
 
+## 2026-10-24 — Monitor de VS Code, fiabilidad, diff, eficiencia y arranque
+
+- Monitor pasivo de sesiones externas por proyecto, con eventos explícitos, detección de señal antigua y asociación persistente con cada slime. Excluye sesiones propias e internas.
+- Salud operativa calcula ocupación y disponibilidad entre 0 y 100 %; los tokens se muestran aparte y no se comparan con un saldo ficticio.
+- Deduplicación de envíos, reintento manual, recuperación de conexión, cierre de streams y pruebas de cancelación/tiempo máximo de procesos.
+- Diffs guardados antes/después, respetando cambios previos, y revisión estructurada de SENTINEL. Los informes no verificables no implican aprobación.
+- Modo eficiente por defecto, planificación guiada opcional, contexto acotado y resultados/diffs cargados bajo demanda.
+- `npm start` y `npm test` desde la raíz, identidad de servicios, reutilización y cierre de procesos propios.
+- Documentadas instalación, revisión por etapas y pruebas manuales. Las regresiones automatizadas no consumen modelos.
+
 ## 2026-10-24 — Enrutamiento y resultado de las misiones de escritura
 
 - Corregido el falso positivo de MUSE al encontrar «ui» dentro de «Quiero»; el enrutamiento reconoce palabras y raíces.

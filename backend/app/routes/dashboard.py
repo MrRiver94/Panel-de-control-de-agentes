@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any, Generator
+from typing import Any
 import json
 import os
-import time
+import asyncio
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
@@ -17,20 +17,21 @@ from ..permissions import require_permission
 from ..repository import audit_connection, read_activity_events
 from ..telemetry import apply_live_telemetry
 from ..timeutils import now
+from ..external_monitor import external_sessions, project_external_agents
 
 router = APIRouter()
 
 
 @router.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {"status": "ok", "app": "slimeops", "version": "0.2.0"}
 
 
 @router.get("/api/dashboard")
-def dashboard(request: Request) -> dict[str, list[dict]]:
+def dashboard(request: Request, workspace: str | None = None) -> dict:
     require_permission(request, "dashboard.view")
     apply_live_telemetry()
-    return dashboard_snapshot()
+    return dashboard_snapshot(workspace)
 
 
 @router.get("/api/usage-series")
@@ -60,8 +61,11 @@ def available_models(request: Request) -> dict[str, Any]:
     ], "source": "configured" if os.getenv("AGENT_MODEL_CATALOG_JSON") else "suggested"}
 
 
-def dashboard_snapshot() -> dict[str, list[dict]]:
-    return {"agents": [agent.model_dump() for agent in state.agents.values()], "events": [event.model_dump(mode="json") for event in read_activity_events(50)]}
+def dashboard_snapshot(workspace: str | None = None) -> dict:
+    sessions = external_sessions(workspace)
+    return {"agents": project_external_agents([agent.model_dump() for agent in state.agents.values()], sessions),
+            "external_sessions": sessions,
+            "events": [event.model_dump(mode="json") for event in read_activity_events(50)]}
 
 
 @router.get("/api/activity/history", response_model=list[ActivityEvent])
@@ -71,17 +75,18 @@ def activity_history(request: Request, limit: int = 100) -> list[ActivityEvent]:
 
 
 @router.get("/api/stream")
-def stream_dashboard() -> StreamingResponse:
+def stream_dashboard(request: Request, workspace: str | None = None) -> StreamingResponse:
     """Push mission status changes immediately; polling remains as a safe fallback."""
-    def event_stream() -> Generator[str, None, None]:
+    require_permission(request, "dashboard.view")
+    async def event_stream():
         previous = ""
-        while True:
-            encoded = json.dumps(dashboard_snapshot(), ensure_ascii=False, separators=(",", ":"))
+        while not await request.is_disconnected():
+            encoded = json.dumps(dashboard_snapshot(workspace), ensure_ascii=False, separators=(",", ":"))
             if encoded != previous:
                 previous = encoded
                 yield f"data: {encoded}\n\n"
             else:
                 yield ": keepalive\n\n"
-            time.sleep(0.25)
+            await asyncio.sleep(0.5)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

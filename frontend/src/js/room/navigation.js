@@ -151,7 +151,8 @@ function makeSlimesWander() {
 function cycleWorkActions() {
   State.agents.forEach((agent, index) => {
     if (agent.status !== 'working' && !agent.simulatedWorking) return;
-    if (agent.execution_id && !agent.simulatedWorking) return;
+    if ((agent.execution_id || agent.usage_source === 'codex-external') && !agent.simulatedWorking)
+      return;
     const current = WorkActionCycle.findIndex((action) => action.id === agent.workAction);
     const next = (current + 1 + (index % 3)) % WorkActionCycle.length;
     agent.workAction = WorkActionCycle[next].id;

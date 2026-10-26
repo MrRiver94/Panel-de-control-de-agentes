@@ -2,7 +2,7 @@
 
 ## Uso desde el panel
 
-1. Arranca la API con `.\start.ps1` desde `backend` y el front con `npm run start` desde `frontend`.
+1. Ejecuta `npm start` desde la raíz para abrir API y frontend juntos; los comandos independientes siguen disponibles.
 2. En **MISIONES REALES · CODEX**, comprueba que aparece «Codex conectado».
 3. Elige la ruta absoluta de un proyecto Git. Por defecto se utiliza este repositorio.
 4. Selecciona **Solo lectura** para análisis y propuestas, o **Permitir cambios en el proyecto** para implementar.
@@ -19,10 +19,10 @@ La API busca `codex` en PATH y, en Windows, el ejecutable de la extensión de VS
 
 ## Turnos de los agentes
 
-- DIRECTOR define alcance; NEXUS prepara el plan.
+- En modo guiado, DIRECTOR define alcance y NEXUS prepara el plan. En modo eficiente se ejecutan solo los especialistas necesarios; es el valor predeterminado.
 - El enrutamiento por palabras elige SCOUT, MUSE, FORGE y SENTINEL. Es determinista, no una decisión autónoma del modelo.
 - Se reconocen palabras completas o sus raíces; `ui` y `ux` no se buscan dentro de otras palabras. Con permiso de escritura siempre se incluyen FORGE y SENTINEL, aunque la orden tenga una formulación distinta.
-- Los turnos son secuenciales para evitar ediciones simultáneas del proyecto. Cada fase tiene su propia sesión Codex y recibe un extracto de los resultados anteriores.
+- Los turnos son secuenciales para evitar ediciones simultáneas del proyecto. Cada fase tiene su propia sesión Codex y recibe un extracto acotado de las tres aportaciones recientes (máximo 2.000 caracteres cada una y 6.000 en total). El objetivo y los perfiles de los agentes se mantienen completos.
 - FORGE puede escribir cuando se selecciona `workspace-write`. Los demás roles utilizan `read-only`.
 - Las instrucciones proceden de `agents/`; MUSE incluye también `muse-lessons.md`.
 - Modelo y esfuerzo se copian de los controles al crear la misión. Modelo vacío utiliza la configuración de Codex local. El runtime actual admite el proveedor Codex.
@@ -38,8 +38,12 @@ El presupuesto es una referencia por fase, no un límite duro ni un saldo de la 
 ## Ciclo de vida y límites
 
 - SQLite guarda estados, resultados por fase y consumo. Recargar el navegador no detiene el trabajo.
+- Cada envío del formulario lleva un identificador persistente en el servidor: repetirlo recupera la misma ejecución. **REINTENTAR MISIÓN** crea un intento nuevo, sin borrar el anterior; no hay reintentos automáticos de trabajos que puedan modificar archivos.
+- El historial periódico usa resúmenes. Resultados, revisión y diff se descargan al solicitarlos. El diff se captura durante la implementación, no se reconstruye después con el estado actual del proyecto. Los intentos antiguos pueden no tenerlo.
+- Los diffs tienen límites de tamaño, omiten rutas sensibles y contenido binario, y ocultan patrones de credenciales. Es una protección defensiva, no una garantía de reconocer todo secreto posible.
 - Se comparan las huellas de los archivos Git antes y después de FORGE, incluyendo cambios previos y archivos no ignorados. Un texto final no prueba una modificación: las misiones de escritura sin diferencias se muestran como **SIN CAMBIOS**. La lista de archivos refleja cambios durante la fase, sin atribuir como nuevos los que ya existían.
 - **CAMBIOS GENERADOS** indica que hay diferencias en archivos; la revisión de SENTINEL y la comprobación visual determinan si satisfacen la petición. Los turnos de solo lectura se muestran como **PROPUESTA LISTA**.
+- Las nuevas revisiones de SENTINEL siguen `runtime/schemas/review.json`: aprobación, cambios solicitados o falta de evidencia. Informes inválidos o contradictorios quedan pendientes de revisión. Una escritura con observaciones aparece como **CAMBIOS CON OBSERVACIONES**.
 - Al cerrar la API se cancelan sus procesos. En Windows, un Job Object termina el árbol si la API se cierra inesperadamente.
 - Al reiniciar, las misiones inconclusas quedan interrumpidas. No se repiten automáticamente.
 - Usa **un worker de Uvicorn**. Un bloqueo del sistema operativo impide dos runtimes sobre la misma base de datos.

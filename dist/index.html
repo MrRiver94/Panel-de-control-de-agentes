@@ -42,8 +42,8 @@
         <article class="Panel MetricsPanel">
           <div class="PanelTitle">SALUD OPERATIVA <i class="LivePulse"></i></div>
           <div class="MetricGrid">
-            <div><span>USO</span><b id="budgetUsage">—</b></div>
-            <div><span>MARGEN</span><b id="budgetMargin">—</b></div>
+            <div><span>OCUPACIÓN</span><b id="budgetUsage">—</b></div>
+            <div><span>DISPONIBLES</span><b id="budgetMargin">—</b></div>
             <div><span>ACTIVOS</span><b id="activeAgents">—</b></div>
             <div><span>ESTADO</span><b id="budgetHealth">—</b></div>
           </div>
@@ -134,12 +134,26 @@
               <option value="workspace-write">Permitir cambios en el proyecto</option>
             </select></label
           >
+          <label
+            >PLANIFICACIÓN<select id="runtimePlanning">
+              <option value="efficient">Solo especialistas necesarios</option>
+              <option value="guided">Añadir DIRECTOR y NEXUS</option>
+            </select></label
+          >
           <button id="refreshRuntime" type="button">RECONECTAR</button>
         </div>
         <small
           >La orden se envía desde NUEVA MISIÓN, en la sala. Se ejecuta una misión cada vez. El
           presupuesto de tokens es orientativo; el consumo se recibe al terminar cada turno.</small
         >
+        <details class="ExternalMonitor">
+          <summary>CODEX EN VS CODE · SESIONES DEL PROYECTO</summary>
+          <p>
+            Una sesión externa se representa por FORGE salvo que tenga un rol reconocido o la
+            vincules a otro slime. Las sesiones internas de seguridad se excluyen.
+          </p>
+          <div id="externalSessionsList"></div>
+        </details>
         <div id="executionHistory" class="ExecutionHistory" aria-live="polite"></div>
       </section>
       <div class="RoomSimulationBar">

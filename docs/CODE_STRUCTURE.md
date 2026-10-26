@@ -23,6 +23,8 @@ La interfaz usa módulos ES nativos del navegador. `frontend/src/app.js` conecta
 | `features/activity.js` | Actividad, consola e historial. |
 | `features/missions.js` | Asignaciones y envío de misiones. |
 | `features/executions.js` | Proyecto, permisos, historial de misiones reales y cancelación. |
+| `features/external-sessions.js` | Sesiones de VS Code y asociación persistente con slimes. |
+| `features/health.js` | Cálculo de ocupación real, separado de presupuestos de tokens. |
 | `features/sessions.js` | Lista de sesiones de Codex. |
 | `services/api.js` | Cliente HTTP y cabecera de operador, compartido por todos los paneles. |
 | `services/live.js` | Dashboard, SSE, consultas periódicas y versión publicada. |
@@ -33,6 +35,8 @@ Las funciones que conectan distintas vistas se llaman después del arranque. Los
 ## Estilos y recursos
 
 La ejecución real está documentada en [CODEX_EXECUTION.md](CODEX_EXECUTION.md). Sus servicios se encuentran en `backend/app/execution.py`, `codex_process.py`, `execution_store.py`, `process_lifetime.py` y `runtime_lock.py`.
+
+`mission_plan.py` selecciona roles y acota el contexto; `execution_diff.py` captura diferencias respecto al estado inicial y `review.py` valida el informe de SENTINEL. `rollout_reader.py` lee metadatos locales y `external_monitor.py` proyecta sesiones externas por proyecto. Los lanzadores conjuntos están en `scripts/start.mjs` y `scripts/test.mjs`; `scripts/local-services.mjs` gestiona identidad y procesos propios.
 
 `frontend/src/styles/app.css` es la entrada única de estilos. Importa los archivos por bloques en el mismo orden que tenían los estilos anteriores para conservar el resultado visual. Algunas reglas de base se completan en archivos posteriores: no reordenar los imports sin comprobar sus efectos en navegador.
 

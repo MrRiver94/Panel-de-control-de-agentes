@@ -62,9 +62,14 @@ const server = createServer(async (request, response) => {
 server.listen(port, host, () => {
   console.log(`Frontend disponible en ${url}`);
   console.log('Pulsa Ctrl+C para detenerlo.');
+  if (process.env.SLIMEOPS_NO_BROWSER === '1') return;
   const opener =
     process.platform === 'win32'
-      ? spawn('cmd.exe', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' })
+      ? spawn('cmd.exe', ['/c', 'start', '', url], {
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true,
+        })
       : process.platform === 'darwin'
         ? spawn('open', [url], { detached: true, stdio: 'ignore' })
         : spawn('xdg-open', [url], { detached: true, stdio: 'ignore' });

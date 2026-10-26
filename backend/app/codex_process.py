@@ -13,14 +13,16 @@ import threading
 import time
 
 from .process_lifetime import ProcessLifetime
+from .git_local import git_environment
 
 
 def codex_environment() -> dict[str, str]:
-    env = os.environ.copy()
+    env = git_environment()
     # Some IDE launches do not export HOME, although USERPROFILE is present.
     home = env.get("USERPROFILE") or str(Path.home())
     env.setdefault("CODEX_HOME", str(Path(home) / ".codex"))
     env.setdefault("HOME", home)
+    env.setdefault('NODE_OPTIONS','--preserve-symlinks --preserve-symlinks-main')
     return env
 
 
@@ -58,8 +60,11 @@ def stop_process(process: subprocess.Popen) -> None:
     if process.poll() is not None:
         return
     if os.name == "nt":
-        subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                       capture_output=True, creationflags=no_window(), timeout=10)
+        try:
+            subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                           capture_output=True, creationflags=no_window(), timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            process.kill()
     else:
         try:
             os.killpg(process.pid, signal.SIGKILL)
@@ -68,7 +73,8 @@ def stop_process(process: subprocess.Popen) -> None:
 
 
 def run_codex(arguments: list[str], prompt: str, workspace: str, cancelled: threading.Event,
-              on_event: Callable[[dict], None], on_process: Callable[[subprocess.Popen | None], None]) -> None:
+              on_event: Callable[[dict], None], on_process: Callable[[subprocess.Popen | None], None],
+              timeout_seconds: float | None = None) -> None:
     """Drain both pipes concurrently, cancel the entire process tree, bound duration."""
     diagnostics: deque[str] = deque(maxlen=8)
     process = subprocess.Popen(
@@ -76,15 +82,18 @@ def run_codex(arguments: list[str], prompt: str, workspace: str, cancelled: thre
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace",
         creationflags=no_window(), start_new_session=os.name != "nt", bufsize=1,
     )
+    lifetime = None
     try:
         lifetime = ProcessLifetime(process)
-    except OSError:
+        on_process(process)
+    except Exception:
+        if lifetime:
+            lifetime.close()
         stop_process(process)
         process.wait(timeout=10)
         for stream in (process.stdin, process.stdout, process.stderr):
             stream.close()
         raise
-    on_process(process)
 
     def drain_errors() -> None:
         for line in process.stderr:
@@ -92,7 +101,7 @@ def run_codex(arguments: list[str], prompt: str, workspace: str, cancelled: thre
 
     timed_out = threading.Event()
     try:
-        timeout = max(30, int(os.getenv("AGENT_RUN_TIMEOUT_SECONDS", "1800")))
+        timeout = timeout_seconds if timeout_seconds is not None else max(30, int(os.getenv("AGENT_RUN_TIMEOUT_SECONDS", "1800")))
     except ValueError:
         timeout = 1800
 
@@ -112,7 +121,10 @@ def run_codex(arguments: list[str], prompt: str, workspace: str, cancelled: thre
     stderr_worker.start()
     watcher.start()
     try:
-        process.stdin.write(prompt)
+        try:
+            process.stdin.write(prompt)
+        except BrokenPipeError:
+            pass
         process.stdin.close()
         for line in process.stdout:
             try:
@@ -134,10 +146,12 @@ def run_codex(arguments: list[str], prompt: str, workspace: str, cancelled: thre
             raise RuntimeError(f"Codex terminó con código {code}. Revisa modelo, permisos y configuración local.")
     finally:
         lifetime.close()
-        stop_process(process)
-        process.wait(timeout=10)
-        watcher.join(timeout=2)
-        stderr_worker.join(timeout=2)
-        for stream in (process.stdin, process.stdout, process.stderr):
-            stream.close()
-        on_process(None)
+        try:
+            stop_process(process)
+            process.wait(timeout=10)
+            watcher.join(timeout=2)
+            stderr_worker.join(timeout=2)
+        finally:
+            for stream in (process.stdin, process.stdout, process.stderr):
+                stream.close()
+            on_process(None)

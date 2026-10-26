@@ -36,16 +36,21 @@ async function submitMission(event) {
   button.disabled = true;
   State.executionBusy = true;
   $('#missionSummary').textContent = 'Solicitando ejecución a Codex…';
+  const payload = {
+    prompt,
+    workspace: $('#runtimeWorkspace').value.trim() || null,
+    sandbox: $('#runtimeSandbox').value,
+    planning: $('#runtimePlanning').value,
+  };
+  const key = JSON.stringify(payload);
+  if (State.pendingDispatch?.key !== key) State.pendingDispatch = { key, id: crypto.randomUUID() };
   try {
     const result = await fetchApi('/api/dispatch', {
       method: 'POST',
-      body: JSON.stringify({
-        prompt,
-        workspace: $('#runtimeWorkspace').value.trim() || null,
-        sandbox: $('#runtimeSandbox').value,
-      }),
+      body: JSON.stringify({ ...payload, request_id: State.pendingDispatch.id }),
     });
     input.value = '';
+    State.pendingDispatch = null;
     $('#missionSummary').textContent = result.plan;
     await syncExecutions();
   } catch (error) {

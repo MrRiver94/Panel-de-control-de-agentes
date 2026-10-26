@@ -1,23 +1,22 @@
-import { visualStatus } from '../agents/model.js';
+import { operationalHealth } from './health.js';
 import { $, formatNumber } from '../dom.js';
 import { State } from '../state.js';
 
 function renderMetricsPanel() {
-  const used = State.agents.reduce((sum, agent) => sum + agent.tokens_used, 0);
-  const budget = State.agents.reduce((sum, agent) => sum + agent.token_budget, 0);
-  const active = State.agents.filter(
-    (agent) => agent.status === 'working' && visualStatus(agent) !== 'error',
-  ).length;
-  const usage = Math.round((used / budget) * 100);
-  const margin = Math.max(0, 100 - usage);
-  const health = usage < 65 ? 'EFICIENTE' : usage < 85 ? 'VIGILAR' : 'REVISAR';
+  const {
+    tokens: used,
+    active,
+    occupancy: usage,
+    availability: margin,
+    status: health,
+  } = operationalHealth(State.agents);
   $('#budgetUsage').textContent = `${usage}%`;
   $('#budgetMargin').textContent = `${margin}%`;
   $('#activeAgents').textContent = `${active}/${State.agents.length}`;
   $('#budgetHealth').textContent = health;
   $('#budgetBar').style.width = `${Math.min(100, usage)}%`;
-  $('#budgetNumbers').textContent = `${formatNumber(used)} / ${formatNumber(budget)} tokens`;
-  $('#efficiencyMessage').textContent = 'Consumo medido · presupuesto orientativo';
+  $('#budgetNumbers').textContent = `${formatNumber(used)} tokens medidos`;
+  $('#efficiencyMessage').textContent = 'Ocupación de agentes · tokens de su última fase';
   $('#telemetryStamp').textContent = State.lastTelemetryAt
     ? `Actualizado ${State.lastTelemetryAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · ${State.connected ? 'API en directo' : 'sin conexión'}`
     : 'Esperando telemetría';

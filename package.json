@@ -1,0 +1,9 @@
+{
+  "name": "slimeops",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --preserve-symlinks-main scripts/start.mjs",
+    "test": "node --preserve-symlinks-main scripts/test.mjs"
+  }
+}

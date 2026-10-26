@@ -1,6 +1,35 @@
 .ExecutionPanel {
   margin: 12px 0;
 }
+.ExternalMonitor {
+  margin-top: 16px;
+  font:
+    11px 'Space Mono',
+    monospace;
+  line-height: 1.8;
+}
+.ExternalMonitor summary {
+  cursor: pointer;
+  color: var(--cyan);
+}
+.ExternalSessionRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 240px);
+  gap: 12px;
+  padding: 8px;
+  border-bottom: 1px solid #496667;
+}
+.ExternalSessionRow select {
+  min-width: 0;
+  background: #101b25;
+  color: var(--cream);
+  padding: 6px;
+}
+@media (max-width: 700px) {
+  .ExternalSessionRow {
+    grid-template-columns: 1fr;
+  }
+}
 .ExecutionPanel > p,
 .ExecutionPanel > small {
   color: var(--cyan);
@@ -11,7 +40,7 @@
 }
 .ExecutionControls {
   display: grid;
-  grid-template-columns: minmax(200px, 2fr) minmax(180px, 1fr) auto;
+  grid-template-columns: minmax(200px, 2fr) minmax(160px, 1fr) minmax(160px, 1fr) auto;
   gap: 12px;
   align-items: end;
   margin: 14px 0;

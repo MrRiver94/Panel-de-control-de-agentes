@@ -7,12 +7,14 @@ SlimeOps observa, configura y ejecuta agentes con Codex CLI local. Las misiones 
 ## Arquitectura
 
 ```text
-Navegador (Site privado)
+Navegador (frontend local o Site privado)
   ├─ Sala, controles y popups
   └─ HTTP + SSE a 127.0.0.1:8000
           │
           ├─ FastAPI: roster, routing y perfiles
           ├─ SQLite: actividad y configuración persistente
+          ├─ Codex CLI: misiones por fases y diffs guardados
+          ├─ Lector de rollouts: proyección de sesiones externas de VS Code
           └─ Codex App Server local: límites y uso de cuenta
 ```
 
@@ -42,6 +44,11 @@ La consola inferior muestra los eventos de `activity_events` recibidos por `/api
 | `activity_events` | Misiones, cambios de controles/perfil y actividad declarada, con tokens de entrada, salida y razonamiento. |
 | `agent_profiles` | Personalización persistida por agente. |
 | `usage_samples` | Muestras del medidor acumulado de agentes cada 15 segundos, usadas para calcular tokens por minuto; se conservan 48 horas. |
+| `runtime_usage_samples` | Muestras reales de `codex_usage`; fuente de la gráfica actual, sin mezclar el medidor antiguo. |
+| `executions` | Estado y resultado de cada intento de misión. |
+| `execution_requests` | Deduplicación persistente de envíos por identificador. |
+| `execution_diffs` | Diff acotado antes/después por misión y archivo. |
+| `session_bindings` | Asociación manual de sesiones externas con slimes. |
 
 La base se inicializa al arrancar. Está ignorada por Git para mantener los registros locales privados.
 
@@ -63,6 +70,15 @@ El ritmo de agentes deriva únicamente de eventos medidos `codex_usage`, guardad
 | POST | `/api/agents/{id}/status` | Recibe un estado operativo explícito y registra el cambio en la auditoría. |
 | GET | `/api/codex-usage` | Lee límites reales del Codex local desde App Server y usa el último snapshot de los rollouts como alternativa. |
 | GET | `/api/codex-sessions` | Lee metadatos y uso agregado de los rollouts locales, sin conservar mensajes. |
+| GET | `/api/runtime` | Disponibilidad y autenticación de Codex local. |
+| GET | `/api/executions?summary=true` | Historial ligero; omite resultados y revisiones completas. |
+| GET | `/api/executions/{id}` | Detalle completo de una misión. |
+| GET | `/api/executions/{id}/diff` | Diferencias guardadas en el momento de implementación. |
+| POST | `/api/executions/{id}/cancel` | Cancela el intento activo. |
+| POST | `/api/executions/{id}/retry` | Crea un intento nuevo desde uno fallido, interrumpido o con observaciones. |
+| POST | `/api/session-bindings` | Asocia una sesión externa con un agente. |
+
+`/api/dashboard` y `/api/stream` aceptan `workspace` para acotar la proyección externa. No modifica los archivos del proyecto. El monitor usa metadatos locales defensivamente; véase `VS_CODE_MONITOR.md`. La ejecución recibe `planning=efficient|guided`, además de `workspace`, `sandbox` y un `request_id` opcional para deduplicar. Los estados de una misión no equivalen al estado de la cuenta: la salud operativa muestra ocupación de agentes y las cuotas de Codex se consultan por separado.
 
 ### Control de acceso y CRUD
 

@@ -93,6 +93,8 @@ class DispatchRequest(BaseModel):
     prompt: str = Field(min_length=3, max_length=2000)
     workspace: str | None = Field(default=None, max_length=500)
     sandbox: Literal["read-only", "workspace-write"] = "read-only"
+    request_id: str | None = Field(default=None, min_length=8, max_length=80, pattern=r"^[A-Za-z0-9_-]+$")
+    planning: Literal['efficient','guided'] = 'efficient'
 
 class DispatchResponse(BaseModel):
     agent_ids: list[str]

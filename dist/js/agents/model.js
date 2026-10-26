@@ -26,6 +26,8 @@ function visualStatus(agent) {
 }
 
 function agentStateLabel(agent) {
+  if (visualStatus(agent) === 'error') return 'ERROR';
+  if (visualStatus(agent) === 'blocked') return 'BLOQUEADO';
   if (agent.visualPhase === 'commuting') return 'EN RUTA';
   if (agent.simulatedWorking) return 'SIMULANDO';
   return (

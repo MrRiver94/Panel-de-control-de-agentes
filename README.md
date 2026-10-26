@@ -4,6 +4,16 @@ Panel visual para controlar un roster de agentes reutilizables. La sala de slime
 
 ## Arranque local
 
+Desde la raíz del repositorio:
+
+```powershell
+npm start
+```
+
+Arranca API y frontend y abre el navegador. Reutiliza los servicios identificados de SlimeOps que ya estén abiertos. `Ctrl+C` cierra solo los procesos que haya iniciado. [Instalación y comandos](docs/LOCAL_STARTUP.md). Para ejecutar todas las pruebas desde la raíz: `npm test`.
+
+### Arranque independiente
+
 Abre dos terminales en la carpeta del proyecto. En la primera, arranca el backend:
 
 ```powershell
@@ -29,6 +39,12 @@ En **Control del agente** puedes guardar proveedor, modelo, presupuesto orientat
 ## Misiones reales
 
 En **MISIONES REALES · CODEX**, selecciona la carpeta Git del proyecto y sus permisos. Envía la orden desde **NUEVA MISIÓN** en la sala. Los agentes se ejecutan por turnos mediante Codex CLI; el historial muestra sesiones, resultados y consumo medido. Puedes cancelar desde el mismo panel. Consulta [la guía de ejecución](docs/CODEX_EXECUTION.md) para configuración, límites y recuperación.
+
+El modo eficiente activa solo los especialistas necesarios; puedes añadir DIRECTOR y NEXUS con planificación guiada. El panel permite cargar el diff guardado de cada misión y el informe de SENTINEL. Los reintentos son manuales y conservan el intento anterior.
+
+Para trabajar directamente desde VS Code, se monitorizan las sesiones externas del proyecto seleccionado y se representan con el slime vinculado. Consulta [el monitor de VS Code](docs/VS_CODE_MONITOR.md).
+
+**Salud operativa** muestra ocupación real de agentes de 0 a 100 %. Los tokens son una cifra separada; un presupuesto orientativo no se presenta como saldo o capacidad de la cuenta.
 
 Para sustituir el catálogo sugerido por los modelos de tu entorno, define `AGENT_MODEL_CATALOG_JSON` antes de arrancar la API. Ejemplo en PowerShell:
 
@@ -57,6 +73,8 @@ El selector lee ese catálogo desde `GET /api/models`. Un modelo ya asignado a u
 Consulta [la guía técnica](docs/TECHNICAL_GUIDE.md) antes de extender el sistema y actualiza [el registro de cambios](docs/CHANGELOG.md) al introducir comportamiento, rutas o datos nuevos.
 
 El [mapa del código](docs/CODE_STRUCTURE.md) explica dónde modificar cada función y cómo ejecutar las comprobaciones.
+
+La [revisión por etapas](docs/IMPLEMENTATION_REVIEW.md) registra lo implementado y comprobado. El [plan de pruebas manuales](docs/MANUAL_TEST_PLAN.md) recoge los escenarios pendientes de validar con la aplicación.
 
 ## Principios
 

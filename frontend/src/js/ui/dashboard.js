@@ -5,6 +5,7 @@ import { renderControlPanel } from '../features/controls.js';
 import { renderCodexUsage, renderMetricsPanel } from '../features/metrics.js';
 import { renderSlimeRoom } from '../room/render.js';
 import { State } from '../state.js';
+import { renderExternalSessions } from '../features/external-sessions.js';
 
 function renderDashboard() {
   renderControlPanel();
@@ -14,6 +15,7 @@ function renderDashboard() {
   renderTerminal();
   renderSlimeRoom();
   renderAgentWatchPanels();
+  renderExternalSessions();
 }
 
 function updateConnectionLabel() {

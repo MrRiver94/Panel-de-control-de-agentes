@@ -7,12 +7,10 @@ from pathlib import Path
 from typing import Any
 import json
 import os
-import re
 import time
 
 MAX_SESSIONS = 40
 TAIL_BYTES = 2_000_000
-ACTIVE_WINDOW_SECONDS = 180
 _cache: dict[str, Any] | None = None
 _cache_at = 0.0
 
@@ -37,60 +35,13 @@ def _recent_rollouts() -> list[Path]:
 
 
 def _read_rollout(path: Path, mtime: float) -> dict[str, Any] | None:
-    try:
-        size = path.stat().st_size
-        with path.open("rb") as stream:
-            if size > TAIL_BYTES:
-                stream.seek(size - TAIL_BYTES)
-                stream.readline()  # Discard a potentially partial first record.
-            raw = stream.read().decode("utf-8", errors="replace")
-    except OSError:
-        return None
-
-    session_id = None
-    project = None
-    usage = None
-    lifecycle = None
-    for line in raw.splitlines():
-        try:
-            record = json.loads(line)
-        except (json.JSONDecodeError, ValueError):
-            continue
-        kind = record.get("type")
-        payload = record.get("payload") or {}
-        if kind == "session_meta":
-            session_id = payload.get("id") or payload.get("session_id")
-            cwd = payload.get("cwd")
-            if isinstance(cwd, str):
-                project = Path(cwd).name or None
-        elif kind == "token_usage_record":
-            value = payload.get("thread_token_usage") or payload.get("usage") or {}
-            if isinstance(value, dict):
-                usage = {key: int(value.get(key, 0) or 0) for key in (
-                    "input_tokens", "cached_input_tokens", "output_tokens",
-                    "reasoning_output_tokens", "total_tokens",
-                )}
-        elif kind == "event_msg":
-            event_type = payload.get("type")
-            if event_type in {"task_started", "task_complete", "turn_aborted"}:
-                lifecycle = event_type
-
-    match = re.search(r"([0-9a-f]{8}-[0-9a-f-]{27,})\.jsonl$", path.name, re.I)
-    session_id = session_id or (match.group(1) if match else path.stem[-12:])
-    age = max(0, datetime.now(timezone.utc).timestamp() - mtime)
-    active = lifecycle == "task_started" and age <= ACTIVE_WINDOW_SECONDS
-    return {
-        "id": session_id,
-        "project": project or "Proyecto desconocido",
-        "status": "activa" if active else "finalizada" if lifecycle == "task_complete" else "sin actividad reciente",
-        "updated_at": datetime.fromtimestamp(mtime, timezone.utc).isoformat(),
-        "usage": usage,
-    }
+    from .rollout_reader import read_session
+    return read_session(path, mtime)
 
 
 def get_codex_sessions() -> dict[str, Any]:
     global _cache, _cache_at
-    if _cache is not None and time.monotonic() - _cache_at < 10:
+    if _cache is not None and time.monotonic() - _cache_at < 2:
         return _cache
     sessions = []
     for path in _recent_rollouts():

@@ -14,7 +14,6 @@ function updateAgentWatchCard(card, agent) {
       : agent.status === 'working' || agent.simulatedWorking
         ? 'Working'
         : `Resting ${agent.idle_mode}`;
-  const usage = Math.round((agent.tokens_used / agent.token_budget) * 100);
   const expanded = State.openAgentId === agent.id;
   card.className = `AgentWatchCard ${state} Status${uppercase(visualStatus(agent)[0])}${visualStatus(agent).slice(1)}${expanded ? ' IsExpanded' : ''}`;
   card.dataset.break = BreakActivities[agent.id] || 'coffee';
@@ -23,7 +22,7 @@ function updateAgentWatchCard(card, agent) {
   card.querySelector('.AgentWatchTop strong').textContent = agent.name;
   card.querySelector('.AgentWatchTop em').textContent = agentStateLabel(agent);
   card.querySelector('.AgentWatchRole').textContent = agent.role;
-  card.querySelector('.AgentWatchTokens').textContent = `${usage}% TOKENS`;
+  card.querySelector('.AgentWatchTokens').textContent = `${formatNumber(agent.tokens_used)} tk`;
   const button = card.querySelector('.AgentInfoButton');
   button.setAttribute('aria-expanded', String(expanded));
   button.querySelector('span').textContent = expanded ? '−' : '+';
@@ -32,7 +31,7 @@ function updateAgentWatchCard(card, agent) {
   popup.querySelector('b').textContent = `${agent.name} · ${agentStateLabel(agent)}`;
   popup.querySelector('p').textContent = agentActivityCopy(agent);
   popup.querySelector('small').textContent =
-    `${formatNumber(agent.tokens_used)} / ${formatNumber(agent.token_budget)} tokens · esfuerzo ${uppercase(agent.reasoning_effort)}`;
+    `${formatNumber(agent.tokens_used)} tokens medidos · referencia orientativa ${formatNumber(agent.token_budget)} · esfuerzo ${uppercase(agent.reasoning_effort)}`;
 }
 
 function renderAgentWatchPanels() {

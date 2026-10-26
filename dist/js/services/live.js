@@ -10,6 +10,7 @@ import { fetchApi } from './api.js';
 
 function consumeDashboard(dashboard) {
   State.latestDashboard = dashboard;
+  State.externalSessions = dashboard.external_sessions || [];
   dashboard.agents.forEach((remoteAgent) => {
     let localAgent = State.agents.find((agent) => agent.id === remoteAgent.id);
     const isNew = !localAgent;
@@ -54,12 +55,18 @@ function consumeDashboard(dashboard) {
 }
 
 async function syncDashboard() {
-  consumeDashboard(await fetchApi('/api/dashboard'));
+  const query = State.monitorWorkspace
+    ? `?workspace=${encodeURIComponent(State.monitorWorkspace)}`
+    : '';
+  consumeDashboard(await fetchApi('/api/dashboard' + query));
 }
 
 function connectLiveStream() {
   if (State.eventSource) return;
-  const stream = new EventSource(`${API_URL}/api/stream`);
+  const query = State.monitorWorkspace
+    ? `?workspace=${encodeURIComponent(State.monitorWorkspace)}`
+    : '';
+  const stream = new EventSource(`${API_URL}/api/stream${query}`);
   State.eventSource = stream;
   stream.onmessage = (event) => {
     try {
